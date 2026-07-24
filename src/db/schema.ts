@@ -27,7 +27,7 @@ export const personen = sqliteTable("personen", {
   sitzplaetze: integer("sitzplaetze"), // nur Betreuer: PKW-Plätze
   jugendflamme1: text("jugendflamme1"), // Datum der Abnahme
   jugendflamme2: text("jugendflamme2"),
-  leistungsspangeDatum: text("leistungsspange_datum"), // Datum der Abnahme; leer = noch offen (Vorschlag aus Geburtsjahr+15)
+  leistungsspangeDatum: text("leistungsspange_datum"), // Datum der Abnahme; leer = noch offen (Vorschlag aus Geburtsjahr+16)
   aktiv: integer("aktiv", { mode: "boolean" }).notNull().default(true),
   ...timestamps,
 });

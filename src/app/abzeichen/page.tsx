@@ -25,7 +25,7 @@ export default function AbzeichenPage() {
     const gebJahr = new Date(p.geburtsdatum).getFullYear();
     const jga = alterInDiesemJahr(p.geburtsdatum);
 
-    // Leistungsspange: nur wenn noch nicht absolviert → Vorschlag geburtsjahr+15
+    // Leistungsspange: nur wenn noch nicht absolviert → Vorschlag geburtsjahr+16
     if (!p.leistungsspangeDatum) {
       const y = leistungsspangeVorschlag(p.geburtsdatum);
       if (y >= jahr) eintraege.push({ jahr: y, typ: "Leistungsspange", name: personName(p) });
@@ -50,7 +50,7 @@ export default function AbzeichenPage() {
 
   return (
     <>
-      <PageHeader title="Abzeichen — Fälligkeit" sub="Vorschlag automatisch (Leistungsspange = Geburtsjahr + 15), manuell überschreibbar">
+      <PageHeader title="Abzeichen — Fälligkeit" sub="Vorschlag automatisch (Leistungsspange = Geburtsjahr + 16), manuell überschreibbar">
         <div className="seg" style={{ fontSize: 12 }}>
           {([["alle", "Alle"], ["lsp", "Spange"], ["jf2", "JF2"], ["jf1", "JF1"]] as [Filter, string][]).map(([f, l]) => (
             <button key={f} className="seg-opt" data-on={filter === f} onClick={() => setFilter(f)}>{l}</button>

@@ -14,10 +14,10 @@ export function alterInDiesemJahr(geburtsdatum: string | Date, jahr = new Date()
   return jahr - geb.getFullYear();
 }
 
-// Leistungsspangen-Vorschlag: möglich ab dem Kalenderjahr, in dem die Person 15 wird
+// Leistungsspangen-Vorschlag: möglich ab dem Kalenderjahr, in dem die Person 16 wird
 export function leistungsspangeVorschlag(geburtsdatum: string | Date): number {
   const geb = typeof geburtsdatum === "string" ? new Date(geburtsdatum) : geburtsdatum;
-  return geb.getFullYear() + 15;
+  return geb.getFullYear() + 16;
 }
 
 export function sollZeit(alterssumme: number) {
