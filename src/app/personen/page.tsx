@@ -408,15 +408,8 @@ export default function PersonenPage() {
                   <DatePicker value={form.jugendflamme2} onChange={(v) => setForm({ ...form, jugendflamme2: v })} />
                 </Field>
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <Field
-                    label={`LSP — Datum der Abnahme${
-                      form.geburtsdatum ? ` · Vorschlag ${leistungsspangeVorschlag(form.geburtsdatum)}` : ""
-                    }`}
-                  >
+                  <Field label="LSP — Datum der Abnahme">
                     <DatePicker value={form.leistungsspangeDatum} onChange={(v) => setForm({ ...form, leistungsspangeDatum: v })} />
-                    <div style={{ fontSize: 10.5, color: "var(--color-neutral-500)", marginTop: 4 }}>
-                      Nur ausfüllen, wenn die Leistungsspange tatsächlich absolviert wurde.
-                    </div>
                   </Field>
                 </div>
               </div>
