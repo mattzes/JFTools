@@ -1,0 +1,165 @@
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
+import * as schema from "./schema";
+import { DISZIPLINEN_SEED, DOKUMENTTYP_SEED } from "@/lib/domain/constants";
+
+const DB_PATH = process.env.DB_PATH ?? path.join(process.cwd(), "data", "app.db");
+
+// DDL statt drizzle-kit-Migrationen: Single-Container, eine Datei, idempotent.
+const DDL = `
+CREATE TABLE IF NOT EXISTS personen (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rolle TEXT NOT NULL,
+  nachname TEXT NOT NULL,
+  vorname TEXT NOT NULL,
+  strasse TEXT, plz TEXT, ort TEXT, ausweisnr TEXT,
+  geburtsdatum TEXT, eintrittsdatum TEXT, geschlecht TEXT,
+  sitzplaetze INTEGER,
+  jugendflamme1 TEXT, jugendflamme2 TEXT, leistungsspange_jahr INTEGER,
+  aktiv INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS termine (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  titel TEXT NOT NULL,
+  datum_von TEXT NOT NULL,
+  datum_bis TEXT,
+  planungsmodus TEXT NOT NULL,
+  zielgruppe TEXT NOT NULL DEFAULT 'alle',
+  ort TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS verfuegbarkeiten (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id INTEGER NOT NULL REFERENCES personen(id) ON DELETE CASCADE,
+  termin_id INTEGER NOT NULL REFERENCES termine(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS verf_person_termin ON verfuegbarkeiten(person_id, termin_id);
+CREATE TABLE IF NOT EXISTS dokumententypen (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS rueckmeldungen (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id INTEGER NOT NULL REFERENCES personen(id) ON DELETE CASCADE,
+  dokumententyp_id INTEGER NOT NULL REFERENCES dokumententypen(id) ON DELETE CASCADE,
+  erhalten INTEGER NOT NULL DEFAULT 0,
+  erhalten_am TEXT, notiz TEXT,
+  termin_id INTEGER REFERENCES termine(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS rueck_person_dok ON rueckmeldungen(person_id, dokumententyp_id);
+CREATE TABLE IF NOT EXISTS gruppen (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  termin_id INTEGER NOT NULL REFERENCES termine(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  altersklasse TEXT,
+  betreuer_person_id INTEGER REFERENCES personen(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS gruppenmitglieder (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  gruppe_id INTEGER NOT NULL REFERENCES gruppen(id) ON DELETE CASCADE,
+  person_id INTEGER NOT NULL REFERENCES personen(id) ON DELETE CASCADE,
+  a_teil_position TEXT,
+  b_teil_laeufer INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS knoten_zuordnungen (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  termin_id INTEGER NOT NULL REFERENCES termine(id) ON DELETE CASCADE,
+  position TEXT NOT NULL,
+  knoten TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS knoten_termin_pos ON knoten_zuordnungen(termin_id, position);
+CREATE TABLE IF NOT EXISTS disziplinen (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  einheit TEXT NOT NULL DEFAULT 's',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS messungen (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id INTEGER NOT NULL REFERENCES personen(id) ON DELETE CASCADE,
+  disziplin_id INTEGER NOT NULL REFERENCES disziplinen(id) ON DELETE CASCADE,
+  datum TEXT NOT NULL,
+  wert_sekunden REAL, wert_text TEXT, notiz TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS hindernis_faehigkeiten (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id INTEGER NOT NULL REFERENCES personen(id) ON DELETE CASCADE,
+  hindernis TEXT NOT NULL DEFAULT 'Wassergraben',
+  material TEXT NOT NULL,
+  status TEXT NOT NULL,
+  notiz TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS hind_person ON hindernis_faehigkeiten(person_id, hindernis);
+`;
+
+// Termine 2026 aus der Spec als Seed
+const TERMINE_SEED: Array<[string, string, string | null, string, string]> = [
+  ["Brennballturnier (Tag 1)", "2026-03-14", null, "keine", "alle"],
+  ["Brennballturnier (Tag 2)", "2026-03-15", null, "keine", "alle"],
+  ["O-Marsch Handorf", "2026-05-01", null, "nur_gruppen", "alle"],
+  ["Pokalwettbewerb Laßrönne", "2026-05-10", null, "a_und_b_teil", "alle"],
+  ["KJF-Tag", "2026-05-31", null, "a_und_b_teil", "alle"],
+  ["SJF-Tag in Rottorf", "2026-06-13", null, "a_und_b_teil", "alle"],
+  ["Bezirksentscheid", "2026-06-13", "2026-06-14", "a_und_b_teil", "alle"],
+  ["Landesentscheid", "2026-06-26", "2026-06-28", "a_und_b_teil", "alle"],
+  ["Kreiszeltlager", "2026-07-17", "2026-07-26", "nur_gruppen", "alle"],
+];
+
+function init() {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  const sqlite = new Database(DB_PATH);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("foreign_keys = ON");
+  sqlite.exec(DDL);
+
+  // Seed nur bei leerem Datenbestand
+  const terminCount = sqlite.prepare("SELECT COUNT(*) AS n FROM termine").get() as { n: number };
+  if (terminCount.n === 0) {
+    const ins = sqlite.prepare(
+      "INSERT INTO termine (titel, datum_von, datum_bis, planungsmodus, zielgruppe) VALUES (?,?,?,?,?)",
+    );
+    for (const t of TERMINE_SEED) ins.run(...t);
+  }
+  const dokCount = sqlite.prepare("SELECT COUNT(*) AS n FROM dokumententypen").get() as { n: number };
+  if (dokCount.n === 0) {
+    const ins = sqlite.prepare("INSERT INTO dokumententypen (name) VALUES (?)");
+    for (const d of DOKUMENTTYP_SEED) ins.run(d);
+  }
+  const disCount = sqlite.prepare("SELECT COUNT(*) AS n FROM disziplinen").get() as { n: number };
+  if (disCount.n === 0) {
+    const ins = sqlite.prepare("INSERT INTO disziplinen (name) VALUES (?)");
+    for (const d of DISZIPLINEN_SEED) ins.run(d);
+  }
+  return sqlite;
+}
+
+// Ein DB-Handle pro Prozess (Next.js Hot-Reload: auf globalThis cachen)
+const globalForDb = globalThis as unknown as { __sqlite?: Database.Database };
+const sqlite = globalForDb.__sqlite ?? init();
+globalForDb.__sqlite = sqlite;
+
+export const db = drizzle(sqlite, { schema });
+export { schema, sqlite };

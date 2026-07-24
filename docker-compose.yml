@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    # Alternativ ein vorgebautes Image referenzieren (Watchtower-kompatibel):
+    # image: ghcr.io/dein-user/jf-rottorf:latest
+    container_name: jf-rottorf
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - jf-data:/data
+    environment:
+      - DB_PATH=/data/app.db
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+volumes:
+  jf-data:

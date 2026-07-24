@@ -1,0 +1,335 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { api, useApi, Person, Termin, Verfuegbarkeit, personName } from "@/lib/api";
+import { Dialog, Empty, ModeTag, PageHeader, Spinner, fmtDate, fmtDateShort, Avatar } from "@/components/ui";
+import { PLANUNGSMODI, ZIELGRUPPEN, Planungsmodus, Zielgruppe } from "@/lib/domain/constants";
+
+const STATUS_CELL = {
+  ja: { icon: "ph-check", c: "var(--color-accent-300)", bg: "var(--color-accent-900)" },
+  nein: { icon: "ph-x", c: "var(--danger)", bg: "rgba(232,110,110,.14)" },
+  offen: { icon: "ph-minus", c: "var(--color-neutral-600)", bg: "transparent" },
+} as const;
+
+const MODUS_LABEL: Record<Planungsmodus, string> = {
+  keine: "keine — nur Verfügbarkeit",
+  nur_gruppen: "nur_gruppen — freie Einteilung",
+  a_teil: "a_teil — 9 Positionen + Knoten",
+  a_und_b_teil: "a_und_b_teil — A + B-Teil",
+};
+
+const ZIEL_LABEL: Record<Zielgruppe, string> = {
+  alle: "alle",
+  nur_betreuer: "nur Betreuer",
+  nur_jugendliche: "nur Jugendliche",
+};
+
+type TerminForm = {
+  id?: number;
+  titel: string;
+  datumVon: string;
+  datumBis: string;
+  planungsmodus: Planungsmodus;
+  zielgruppe: Zielgruppe;
+  ort: string;
+};
+
+const EMPTY: TerminForm = { titel: "", datumVon: "", datumBis: "", planungsmodus: "keine", zielgruppe: "alle", ort: "" };
+
+export default function TerminePage() {
+  const { data: personen } = useApi<Person[]>("/personen");
+  const { data: termine, reload } = useApi<Termin[]>("/termine");
+  const { data: verf, reload: reloadVerf } = useApi<Verfuegbarkeit[]>("/verfuegbarkeiten");
+  const [ansicht, setAnsicht] = useState<"matrix" | "liste">("matrix");
+  const [form, setForm] = useState<TerminForm | null>(null);
+  const [fehler, setFehler] = useState<string | null>(null);
+
+  const cellMap = useMemo(() => {
+    const m = new Map<string, Verfuegbarkeit["status"]>();
+    verf?.forEach((v) => m.set(`${v.personId}:${v.terminId}`, v.status));
+    return m;
+  }, [verf]);
+
+  if (!personen || !termine || !verf) return <Spinner />;
+
+  const aktive = personen.filter((p) => p.aktiv);
+  function zielPersonen(t: Termin) {
+    return t.zielgruppe === "nur_betreuer"
+      ? aktive.filter((p) => p.rolle === "betreuer")
+      : t.zielgruppe === "nur_jugendliche"
+        ? aktive.filter((p) => p.rolle === "jugendlich")
+        : aktive;
+  }
+
+  async function setCell(personId: number, terminId: number, status: Verfuegbarkeit["status"]) {
+    await api("/verfuegbarkeiten", { method: "PUT", body: JSON.stringify({ personId, terminId, status }) });
+    reloadVerf();
+  }
+
+  function cycle(personId: number, terminId: number) {
+    const cur = cellMap.get(`${personId}:${terminId}`) ?? "offen";
+    const next = cur === "offen" ? "ja" : cur === "ja" ? "nein" : "offen";
+    setCell(personId, terminId, next);
+  }
+
+  async function save() {
+    if (!form) return;
+    setFehler(null);
+    const payload = {
+      titel: form.titel.trim(),
+      datumVon: form.datumVon,
+      datumBis: form.datumBis || null,
+      planungsmodus: form.planungsmodus,
+      zielgruppe: form.zielgruppe,
+      ort: form.ort || null,
+    };
+    try {
+      if (form.id) await api(`/termine/${form.id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      else await api("/termine", { method: "POST", body: JSON.stringify(payload) });
+      setForm(null);
+      reload();
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  return (
+    <>
+      <PageHeader title="Termine & Verfügbarkeit" sub={`Saison ${new Date().getFullYear()} · Ja / Nein / offen`}>
+        <div className="seg hidden lg:inline-flex" style={{ fontSize: 12 }}>
+          <button className="seg-opt" data-on={ansicht === "matrix"} onClick={() => setAnsicht("matrix")}>Matrix</button>
+          <button className="seg-opt" data-on={ansicht === "liste"} onClick={() => setAnsicht("liste")}>Liste</button>
+        </div>
+        <button className="btn btn-primary" onClick={() => { setFehler(null); setForm(EMPTY); }}>
+          <i className="ph ph-calendar-plus" />
+          Termin
+        </button>
+      </PageHeader>
+
+      {termine.length === 0 ? (
+        <Empty icon="ph-calendar-dots" text="Keine Termine" hint="Lege den ersten Termin an." />
+      ) : (
+        <>
+          {/* Desktop: Matrix oder Liste */}
+          <div className="hidden lg:flex" style={{ flex: 1, overflow: "auto", padding: "8px 18px 0" }}>
+            {ansicht === "matrix" ? (
+              <MatrixView aktive={aktive} termine={termine} cellMap={cellMap} zielPersonen={zielPersonen} onCycle={cycle} />
+            ) : (
+              <ListeView termine={termine} verf={verf} zielPersonen={zielPersonen} onEdit={(t) => setForm({ id: t.id, titel: t.titel, datumVon: t.datumVon, datumBis: t.datumBis ?? "", planungsmodus: t.planungsmodus, zielgruppe: t.zielgruppe, ort: t.ort ?? "" })} />
+            )}
+          </div>
+
+          {/* Mobile: Terminliste (führt zur Abhak-Ansicht) */}
+          <div className="flex flex-col gap-2 lg:hidden" style={{ flex: 1, overflowY: "auto", padding: "6px 16px 16px" }}>
+            {termine.map((t) => {
+              const ziel = zielPersonen(t);
+              const zusagen = verf.filter((v) => v.terminId === t.id && v.status === "ja" && ziel.some((p) => p.id === v.personId)).length;
+              const d = fmtDateShort(t.datumVon);
+              return (
+                <Link key={t.id} href={`/termine/${t.id}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", background: "var(--color-surface)", borderRadius: 11, textDecoration: "none", color: "inherit" }}>
+                  <div style={{ width: 38, flex: "none", textAlign: "center", lineHeight: 1.05 }}>
+                    <div style={{ font: "600 17px/1 var(--font-heading)" }}>{d.tag}</div>
+                    <div style={{ fontSize: 10, color: "var(--color-neutral-500)", textTransform: "uppercase" }}>{d.mon}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{t.titel}</div>
+                    <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 1 }}>{zusagen}/{ziel.length} Zusagen</div>
+                  </div>
+                  <ModeTag modus={t.planungsmodus} short />
+                  <i className="ph ph-caret-right" style={{ color: "var(--color-neutral-600)" }} />
+                </Link>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {form && (
+        <Dialog title={form.id ? "Termin bearbeiten" : "Neuer Termin"} onClose={() => setForm(null)}>
+          <div className="field">
+            <label>Titel *</label>
+            <input className="input" value={form.titel} onChange={(e) => setForm({ ...form, titel: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="field">
+              <label>Datum von *</label>
+              <input type="date" className="input" value={form.datumVon} onChange={(e) => setForm({ ...form, datumVon: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Datum bis (mehrtägig)</label>
+              <input type="date" className="input" value={form.datumBis} onChange={(e) => setForm({ ...form, datumBis: e.target.value })} />
+            </div>
+          </div>
+          <div className="field">
+            <label>Planungsmodus</label>
+            <select className="input" value={form.planungsmodus} onChange={(e) => setForm({ ...form, planungsmodus: e.target.value as Planungsmodus })}>
+              {PLANUNGSMODI.map((m) => (
+                <option key={m} value={m}>{MODUS_LABEL[m]}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="field">
+              <label>Zielgruppe</label>
+              <select className="input" value={form.zielgruppe} onChange={(e) => setForm({ ...form, zielgruppe: e.target.value as Zielgruppe })}>
+                {ZIELGRUPPEN.map((z) => (
+                  <option key={z} value={z}>{ZIEL_LABEL[z]}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Ort</label>
+              <input className="input" value={form.ort} onChange={(e) => setForm({ ...form, ort: e.target.value })} />
+            </div>
+          </div>
+          {fehler && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{fehler}</div>}
+          <div className="dialog-actions">
+            {form.id && (
+              <button
+                className="btn btn-danger"
+                style={{ marginRight: "auto" }}
+                onClick={async () => {
+                  if (confirm("Diesen Termin wirklich löschen? Verfügbarkeiten und Planung gehen verloren.")) {
+                    await api(`/termine/${form.id}`, { method: "DELETE" });
+                    setForm(null);
+                    reload();
+                    reloadVerf();
+                  }
+                }}
+              >
+                <i className="ph ph-trash" />
+                Löschen
+              </button>
+            )}
+            <button className="btn btn-secondary" onClick={() => setForm(null)}>Abbrechen</button>
+            <button className="btn btn-primary" onClick={save} disabled={!form.titel.trim() || !form.datumVon}>
+              <i className="ph ph-check" />
+              Speichern
+            </button>
+          </div>
+        </Dialog>
+      )}
+    </>
+  );
+}
+
+function MatrixView({
+  aktive,
+  termine,
+  cellMap,
+  zielPersonen,
+  onCycle,
+}: {
+  aktive: Person[];
+  termine: Termin[];
+  cellMap: Map<string, Verfuegbarkeit["status"]>;
+  zielPersonen: (t: Termin) => Person[];
+  onCycle: (personId: number, terminId: number) => void;
+}) {
+  return (
+    <table className="table" style={{ minWidth: 640 }}>
+      <thead>
+        <tr>
+          <th style={{ minWidth: 150 }}>Person</th>
+          {termine.map((t) => {
+            const ziel = zielPersonen(t);
+            const ja = ziel.filter((p) => cellMap.get(`${p.id}:${t.id}`) === "ja").length;
+            const d = fmtDateShort(t.datumVon);
+            return (
+              <th key={t.id} style={{ textAlign: "center", paddingBottom: 8 }}>
+                <div style={{ fontSize: 12, color: "var(--color-text)", fontWeight: 600 }}>{d.tag}. {d.mon}</div>
+                <div style={{ margin: "4px 0 3px", display: "flex", justifyContent: "center" }}>
+                  <ModeTag modus={t.planungsmodus} short />
+                </div>
+                <div style={{ fontSize: 10, color: "var(--color-neutral-500)", textTransform: "none", letterSpacing: 0 }}>
+                  {t.titel.length > 14 ? t.titel.slice(0, 13) + "…" : t.titel} · {ja}/{ziel.length}
+                </div>
+              </th>
+            );
+          })}
+        </tr>
+      </thead>
+      <tbody>
+        {aktive.map((p) => (
+          <tr key={p.id}>
+            <td>
+              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <Avatar name={personName(p)} size={24} />
+                <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
+              </div>
+            </td>
+            {termine.map((t) => {
+              const ziel = zielPersonen(t);
+              const inScope = ziel.some((z) => z.id === p.id);
+              const s = inScope ? cellMap.get(`${p.id}:${t.id}`) ?? "offen" : null;
+              const cell = s ? STATUS_CELL[s] : null;
+              return (
+                <td key={t.id} style={{ textAlign: "center" }}>
+                  {cell ? (
+                    <button
+                      onClick={() => onCycle(p.id, t.id)}
+                      title="klicken zum Wechseln (Ja → Nein → offen)"
+                      style={{ display: "inline-grid", placeItems: "center", width: 26, height: 26, borderRadius: 7, background: cell.bg, color: cell.c, border: 0, cursor: "pointer" }}
+                    >
+                      <i className={`ph-bold ${cell.icon}`} style={{ fontSize: 12 }} />
+                    </button>
+                  ) : (
+                    <span style={{ color: "var(--color-neutral-800)" }}>·</span>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ListeView({
+  termine,
+  verf,
+  zielPersonen,
+  onEdit,
+}: {
+  termine: Termin[];
+  verf: Verfuegbarkeit[];
+  zielPersonen: (t: Termin) => Person[];
+  onEdit: (t: Termin) => void;
+}) {
+  return (
+    <table className="table">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Titel</th>
+          <th>Modus</th>
+          <th>Zielgruppe</th>
+          <th style={{ textAlign: "right" }}>Zusagen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {termine.map((t) => {
+          const ziel = zielPersonen(t);
+          const ja = verf.filter((v) => v.terminId === t.id && v.status === "ja" && ziel.some((p) => p.id === v.personId)).length;
+          return (
+            <tr key={t.id}>
+              <td style={{ whiteSpace: "nowrap" }}>{fmtDate(t.datumVon)}{t.datumBis ? `–${fmtDate(t.datumBis).slice(0, 5)}` : ""}</td>
+              <td style={{ fontWeight: 500 }}>
+                <Link href={`/termine/${t.id}`} style={{ color: "inherit", textDecoration: "none" }}>{t.titel}</Link>
+              </td>
+              <td><ModeTag modus={t.planungsmodus} /></td>
+              <td style={{ fontSize: 12.5, color: "var(--color-neutral-400)" }}>{ZIEL_LABEL[t.zielgruppe]}</td>
+              <td style={{ textAlign: "right", fontWeight: 600 }}>{ja}<span style={{ color: "var(--color-neutral-600)" }}>/{ziel.length}</span></td>
+              <td style={{ textAlign: "right" }}>
+                <button className="btn btn-ghost" onClick={() => onEdit(t)}><i className="ph ph-pencil-simple" /></button>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
