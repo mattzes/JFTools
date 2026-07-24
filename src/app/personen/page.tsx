@@ -396,18 +396,32 @@ export default function PersonenPage() {
             <Field label="Sitzplätze im PKW (für Fahrgemeinschaften) *">
               <input type="number" min={0} max={9} className="input" value={form.sitzplaetze} onChange={(e) => setForm({ ...form, sitzplaetze: e.target.value })} />
             </Field>
-          ) : (
-            <Field
-              label={`Leistungsspange — Datum der Abnahme${
-                form.geburtsdatum ? ` · Vorschlag ${leistungsspangeVorschlag(form.geburtsdatum)}` : ""
-              }`}
-            >
-              <DatePicker value={form.leistungsspangeDatum} onChange={(v) => setForm({ ...form, leistungsspangeDatum: v })} />
-              <div style={{ fontSize: 10.5, color: "var(--color-neutral-500)", marginTop: 4 }}>
-                Nur ausfüllen, wenn die Leistungsspange tatsächlich absolviert wurde.
+          ) : form.id ? (
+            // Abzeichen werden erst beim Bearbeiten erfasst, nicht beim Anlegen
+            <>
+              <SectionLabel>Abzeichen</SectionLabel>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="JFL1 — Datum der Abnahme">
+                  <DatePicker value={form.jugendflamme1} onChange={(v) => setForm({ ...form, jugendflamme1: v })} />
+                </Field>
+                <Field label="JFL2 — Datum der Abnahme">
+                  <DatePicker value={form.jugendflamme2} onChange={(v) => setForm({ ...form, jugendflamme2: v })} />
+                </Field>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <Field
+                    label={`LSP — Datum der Abnahme${
+                      form.geburtsdatum ? ` · Vorschlag ${leistungsspangeVorschlag(form.geburtsdatum)}` : ""
+                    }`}
+                  >
+                    <DatePicker value={form.leistungsspangeDatum} onChange={(v) => setForm({ ...form, leistungsspangeDatum: v })} />
+                    <div style={{ fontSize: 10.5, color: "var(--color-neutral-500)", marginTop: 4 }}>
+                      Nur ausfüllen, wenn die Leistungsspange tatsächlich absolviert wurde.
+                    </div>
+                  </Field>
+                </div>
               </div>
-            </Field>
-          )}
+            </>
+          ) : null}
 
           {fehler && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{fehler}</div>}
           <div className="dialog-actions">
