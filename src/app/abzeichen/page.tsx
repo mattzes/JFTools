@@ -52,7 +52,7 @@ export default function AbzeichenPage() {
     <>
       <PageHeader title="Abzeichen — Fälligkeit" sub="Vorschlag automatisch (Leistungsspange = Geburtsjahr + 16), manuell überschreibbar">
         <div className="seg" style={{ fontSize: 12 }}>
-          {([["alle", "Alle"], ["lsp", "Spange"], ["jf2", "JF2"], ["jf1", "JF1"]] as [Filter, string][]).map(([f, l]) => (
+          {([["alle", "Alle"], ["lsp", "LSP"], ["jf2", "JFL2"], ["jf1", "JFL1"]] as [Filter, string][]).map(([f, l]) => (
             <button key={f} className="seg-opt" data-on={filter === f} onClick={() => setFilter(f)}>{l}</button>
           ))}
         </div>

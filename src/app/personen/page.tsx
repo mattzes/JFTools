@@ -162,7 +162,7 @@ export default function PersonenPage() {
                     <th style={{ textAlign: "center" }}>Jahrg.-Alter</th>
                     <th style={{ textAlign: "center" }}>JFL1</th>
                     <th style={{ textAlign: "center" }}>JFL2</th>
-                    <th>Leistungsspange</th>
+                    <th>LSP</th>
                   </tr>
                 </thead>
                 <tbody>
