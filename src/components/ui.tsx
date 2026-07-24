@@ -202,6 +202,12 @@ export function DatePicker({
     cells.push({ y: d.getFullYear(), m: d.getMonth(), d: d.getDate(), out: true });
   }
 
+  const nowY = now.getFullYear();
+  const minY = Math.min(nowY - 100, view.y);
+  const maxY = Math.max(nowY + 20, view.y);
+  const years: number[] = [];
+  for (let y = maxY; y >= minY; y--) years.push(y);
+
   const shift = (delta: number) => {
     const d = new Date(view.y, view.m + delta, 1);
     setView({ y: d.getFullYear(), m: d.getMonth() });
@@ -238,7 +244,28 @@ export function DatePicker({
               <button type="button" className="dp-nav" onClick={() => shift(-1)} aria-label="Vorheriger Monat">
                 <i className="ph ph-caret-left" />
               </button>
-              <div className="dp-title">{DP_MONTHS[view.m]} {view.y}</div>
+              <div className="dp-selects">
+                <select
+                  className="dp-sel"
+                  value={view.m}
+                  onChange={(e) => setView({ ...view, m: Number(e.target.value) })}
+                  aria-label="Monat"
+                >
+                  {DP_MONTHS.map((mn, i) => (
+                    <option key={mn} value={i}>{mn}</option>
+                  ))}
+                </select>
+                <select
+                  className="dp-sel"
+                  value={view.y}
+                  onChange={(e) => setView({ ...view, y: Number(e.target.value) })}
+                  aria-label="Jahr"
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
               <button type="button" className="dp-nav" onClick={() => shift(1)} aria-label="Nächster Monat">
                 <i className="ph ph-caret-right" />
               </button>

@@ -222,7 +222,14 @@ select.input { appearance: auto; }
   font-family: var(--font-body);
 }
 .dp-head { display: flex; align-items: center; gap: 4px; }
-.dp-title { flex: 1; text-align: center; font-family: var(--font-heading); font-weight: 500; font-size: 14px; }
+.dp-selects { flex: 1; display: flex; gap: 6px; justify-content: center; }
+.dp-sel {
+  min-height: 30px; padding: 3px 6px; font-size: 13px;
+  color: var(--color-text); background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  font-family: var(--font-heading); font-weight: 500; cursor: pointer;
+}
+.dp-sel:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
 .dp-nav {
   width: 30px; height: 30px; display: grid; place-items: center;
   border: 0; background: transparent; color: var(--color-text);
