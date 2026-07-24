@@ -75,6 +75,18 @@ export default function PersonenPage() {
   async function save() {
     if (!form) return;
     setFehler(null);
+    const istBetreuer = form.rolle === "betreuer";
+    if (istBetreuer) {
+      if (form.sitzplaetze.trim() === "") {
+        setFehler("Sitzplätze sind für Betreuer eine Pflichtangabe.");
+        return;
+      }
+    } else {
+      if (!form.geburtsdatum || !form.eintrittsdatum || !form.geschlecht || !form.ausweisnr.trim()) {
+        setFehler("Für Jugendliche sind Geburtsdatum, Eintrittsdatum, Geschlecht und Mitgliedsnummer Pflicht.");
+        return;
+      }
+    }
     if (form.geburtsdatum && !geburtsdatumPlausibel(form.geburtsdatum)) {
       setFehler("Geburtsdatum unplausibel (Alter muss zwischen 5 und 80 liegen) — bitte prüfen.");
       return;
@@ -83,17 +95,17 @@ export default function PersonenPage() {
       rolle: form.rolle,
       vorname: form.vorname.trim(),
       nachname: form.nachname.trim(),
-      strasse: form.strasse || null,
-      plz: form.plz || null,
-      ort: form.ort || null,
-      ausweisnr: form.ausweisnr || null,
-      geburtsdatum: form.geburtsdatum || null,
-      eintrittsdatum: form.eintrittsdatum || null,
-      geschlecht: form.geschlecht || null,
-      sitzplaetze: form.sitzplaetze !== "" ? Number(form.sitzplaetze) : null,
-      jugendflamme1: form.jugendflamme1 || null,
-      jugendflamme2: form.jugendflamme2 || null,
-      leistungsspangeJahr: form.leistungsspangeJahr !== "" ? Number(form.leistungsspangeJahr) : null,
+      strasse: istBetreuer ? null : form.strasse || null,
+      plz: istBetreuer ? null : form.plz || null,
+      ort: istBetreuer ? null : form.ort || null,
+      ausweisnr: istBetreuer ? null : form.ausweisnr || null,
+      geburtsdatum: istBetreuer ? null : form.geburtsdatum || null,
+      eintrittsdatum: istBetreuer ? null : form.eintrittsdatum || null,
+      geschlecht: istBetreuer ? null : form.geschlecht || null,
+      sitzplaetze: istBetreuer && form.sitzplaetze !== "" ? Number(form.sitzplaetze) : null,
+      jugendflamme1: istBetreuer ? null : form.jugendflamme1 || null,
+      jugendflamme2: istBetreuer ? null : form.jugendflamme2 || null,
+      leistungsspangeJahr: !istBetreuer && form.leistungsspangeJahr !== "" ? Number(form.leistungsspangeJahr) : null,
       aktiv: form.aktiv,
     };
     try {
@@ -116,8 +128,6 @@ export default function PersonenPage() {
     });
     reloadHind();
   }
-
-  const lspVorschlag = form?.geburtsdatum ? leistungsspangeVorschlag(form.geburtsdatum) : null;
 
   return (
     <>
@@ -343,63 +353,60 @@ export default function PersonenPage() {
             <Field label="Nachname *">
               <input className="input" value={form.nachname} onChange={(e) => setForm({ ...form, nachname: e.target.value })} />
             </Field>
-            <Field label="Geburtsdatum">
-              <input type="date" className="input" value={form.geburtsdatum} onChange={(e) => setForm({ ...form, geburtsdatum: e.target.value })} />
-            </Field>
-            <Field label="Eintrittsdatum">
-              <input type="date" className="input" value={form.eintrittsdatum} onChange={(e) => setForm({ ...form, eintrittsdatum: e.target.value })} />
-            </Field>
-            <Field label="Geschlecht">
-              <select className="input" value={form.geschlecht} onChange={(e) => setForm({ ...form, geschlecht: e.target.value as FormState["geschlecht"] })}>
-                <option value="">—</option>
-                <option value="M">M</option>
-                <option value="W">W</option>
-              </select>
-            </Field>
-            <Field label="Mitgliedsnummer (Ausweis-Nr.)">
-              <input className="input" value={form.ausweisnr} onChange={(e) => setForm({ ...form, ausweisnr: e.target.value })} />
-            </Field>
-            <Field label="Straße">
-              <input className="input" value={form.strasse} onChange={(e) => setForm({ ...form, strasse: e.target.value })} />
-            </Field>
-            <div className="grid grid-cols-[80px_1fr] gap-2">
-              <Field label="PLZ">
-                <input className="input" value={form.plz} onChange={(e) => setForm({ ...form, plz: e.target.value })} />
-              </Field>
-              <Field label="Ort">
-                <input className="input" value={form.ort} onChange={(e) => setForm({ ...form, ort: e.target.value })} />
-              </Field>
-            </div>
+
+            {form.rolle === "jugendlich" && (
+              <>
+                <Field label="Geburtsdatum *">
+                  <input type="date" className="input" value={form.geburtsdatum} onChange={(e) => setForm({ ...form, geburtsdatum: e.target.value })} />
+                </Field>
+                <Field label="Eintrittsdatum *">
+                  <input type="date" className="input" value={form.eintrittsdatum} onChange={(e) => setForm({ ...form, eintrittsdatum: e.target.value })} />
+                </Field>
+                <Field label="Geschlecht *">
+                  <select className="input" value={form.geschlecht} onChange={(e) => setForm({ ...form, geschlecht: e.target.value as FormState["geschlecht"] })}>
+                    <option value="">—</option>
+                    <option value="M">M</option>
+                    <option value="W">W</option>
+                  </select>
+                </Field>
+                <Field label="Mitgliedsnummer (Ausweis-Nr.) *">
+                  <input className="input" value={form.ausweisnr} onChange={(e) => setForm({ ...form, ausweisnr: e.target.value })} />
+                </Field>
+                <Field label="Straße">
+                  <input className="input" value={form.strasse} onChange={(e) => setForm({ ...form, strasse: e.target.value })} />
+                </Field>
+                <div className="grid grid-cols-[80px_1fr] gap-2">
+                  <Field label="PLZ">
+                    <input className="input" value={form.plz} onChange={(e) => setForm({ ...form, plz: e.target.value })} />
+                  </Field>
+                  <Field label="Ort">
+                    <input className="input" value={form.ort} onChange={(e) => setForm({ ...form, ort: e.target.value })} />
+                  </Field>
+                </div>
+              </>
+            )}
           </div>
 
-          {form.rolle === "betreuer" ? (
-            <Field label="Sitzplätze im PKW (für Fahrgemeinschaften)">
+          {form.rolle === "betreuer" && (
+            <Field label="Sitzplätze im PKW (für Fahrgemeinschaften) *">
               <input type="number" min={0} max={9} className="input" value={form.sitzplaetze} onChange={(e) => setForm({ ...form, sitzplaetze: e.target.value })} />
             </Field>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Jugendflamme 1">
-                <input type="date" className="input" value={form.jugendflamme1} onChange={(e) => setForm({ ...form, jugendflamme1: e.target.value })} />
-              </Field>
-              <Field label="Jugendflamme 2">
-                <input type="date" className="input" value={form.jugendflamme2} onChange={(e) => setForm({ ...form, jugendflamme2: e.target.value })} />
-              </Field>
-              <Field label={`Leistungsspange (Jahr)${lspVorschlag ? ` · Vorschlag ${lspVorschlag}` : ""}`}>
-                <input
-                  type="number"
-                  className="input"
-                  placeholder={lspVorschlag ? String(lspVorschlag) : "Jahr"}
-                  value={form.leistungsspangeJahr}
-                  onChange={(e) => setForm({ ...form, leistungsspangeJahr: e.target.value })}
-                />
-              </Field>
-            </div>
           )}
 
           {fehler && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{fehler}</div>}
           <div className="dialog-actions">
             <button className="btn btn-secondary" onClick={() => setForm(null)}>Abbrechen</button>
-            <button className="btn btn-primary" onClick={save} disabled={!form.vorname.trim() || !form.nachname.trim()}>
+            <button
+              className="btn btn-primary"
+              onClick={save}
+              disabled={
+                !form.vorname.trim() ||
+                !form.nachname.trim() ||
+                (form.rolle === "betreuer"
+                  ? form.sitzplaetze.trim() === ""
+                  : !form.geburtsdatum || !form.eintrittsdatum || !form.geschlecht || !form.ausweisnr.trim())
+              }
+            >
               <i className="ph ph-check" />
               Speichern
             </button>

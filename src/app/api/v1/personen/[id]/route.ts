@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { personSchema } from "@/lib/domain/schemas";
+import { personUpdateSchema } from "@/lib/domain/schemas";
 import { requireAuth, parseBody, jsonError, touch } from "@/lib/api-helpers";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -17,7 +17,7 @@ export async function GET(_req: Request, ctx: Ctx) {
 export async function PATCH(req: Request, ctx: Ctx) {
   await requireAuth();
   const id = Number((await ctx.params).id);
-  const body = await parseBody(req, personSchema.partial());
+  const body = await parseBody(req, personUpdateSchema);
   if (body instanceof NextResponse) return body;
   const row = db
     .update(schema.personen)

@@ -14,7 +14,7 @@ import {
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Datum im Format JJJJ-MM-TT");
 
-export const personSchema = z.object({
+const personBaseSchema = z.object({
   rolle: z.enum(ROLLEN),
   nachname: z.string().min(1, "Nachname fehlt"),
   vorname: z.string().min(1, "Vorname fehlt"),
@@ -31,6 +31,46 @@ export const personSchema = z.object({
   leistungsspangeJahr: z.number().int().min(1990).max(2100).nullish(),
   aktiv: z.boolean().default(true),
 });
+
+type PersonRefineInput = {
+  rolle?: (typeof ROLLEN)[number];
+  sitzplaetze?: number | null;
+  geburtsdatum?: string | null;
+  eintrittsdatum?: string | null;
+  geschlecht?: string | null;
+  ausweisnr?: string | null;
+};
+
+// Rollenabhängige Pflichtfelder. Bei Teil-Updates (PATCH ohne `rolle`, z. B.
+// Aktiv-Toggle) werden die Cross-Field-Regeln übersprungen.
+function refinePerson(data: PersonRefineInput, ctx: z.RefinementCtx) {
+  if (data.rolle === undefined) return;
+  if (data.rolle === "betreuer") {
+    if (data.sitzplaetze == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sitzplaetze"],
+        message: "Sitzplätze sind für Betreuer eine Pflichtangabe.",
+      });
+    }
+  } else {
+    const pflicht: [keyof PersonRefineInput, string][] = [
+      ["geburtsdatum", "Geburtsdatum fehlt"],
+      ["eintrittsdatum", "Eintrittsdatum fehlt"],
+      ["geschlecht", "Geschlecht fehlt"],
+      ["ausweisnr", "Mitgliedsnummer fehlt"],
+    ];
+    for (const [feld, message] of pflicht) {
+      const wert = data[feld];
+      if (wert == null || (typeof wert === "string" && wert.trim() === "")) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [feld], message });
+      }
+    }
+  }
+}
+
+export const personSchema = personBaseSchema.superRefine(refinePerson);
+export const personUpdateSchema = personBaseSchema.partial().superRefine(refinePerson);
 
 export const terminSchema = z.object({
   titel: z.string().min(1, "Titel fehlt"),
