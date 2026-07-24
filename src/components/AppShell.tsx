@@ -10,7 +10,6 @@ const NAV_ITEMS = [
   { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Rückmeldungen", key: "rueck" },
   { href: "/abzeichen", icon: "ph-medal", label: "Abzeichen", key: "abzeichen" },
   { href: "/wettbewerbe", icon: "ph-trophy", label: "Wettbewerbe", key: "wettbewerb" },
-  { href: "/zeltlager", icon: "ph-tent", label: "Zeltlager", key: "zeltlager" },
   { href: "/training", icon: "ph-timer", label: "Training", key: "training" },
 ];
 
@@ -20,7 +19,7 @@ const TAB_ITEMS = [
   { href: "/personen", icon: "ph-users-three", label: "Personen", match: ["/personen"] },
   { href: "/termine", icon: "ph-calendar-dots", label: "Termine", match: ["/termine"] },
   { href: "/wettbewerbe", icon: "ph-trophy", label: "Planer", match: ["/wettbewerbe"] },
-  { href: "/mehr", icon: "ph-dots-three-outline", label: "Mehr", match: ["/mehr", "/rueckmeldungen", "/abzeichen", "/zeltlager", "/training"] },
+  { href: "/mehr", icon: "ph-dots-three-outline", label: "Mehr", match: ["/mehr", "/rueckmeldungen", "/abzeichen", "/training"] },
 ];
 
 function isActive(pathname: string, href: string) {

@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/ui";
 const LINKS = [
   { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Rückmeldungen", sub: "Zettel & Einverständnis" },
   { href: "/abzeichen", icon: "ph-medal", label: "Abzeichen", sub: "Fälligkeit nach Jahr" },
-  { href: "/zeltlager", icon: "ph-tent", label: "Zeltlager", sub: "Einteilung nach Altersklassen" },
   { href: "/training", icon: "ph-timer", label: "Training", sub: "Zeiten & Auswertung" },
 ];
 
