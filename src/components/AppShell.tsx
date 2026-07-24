@@ -103,10 +103,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* MobileTabs — Bottom-Tab-Bar */}
       <div
-        className="lg:hidden"
+        className="flex lg:hidden"
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
-          display: "flex", alignItems: "stretch", justifyContent: "space-around",
+          alignItems: "stretch", justifyContent: "space-around",
           background: "#1b1d29", borderTop: "1px solid var(--color-divider)",
           padding: "7px 6px calc(9px + env(safe-area-inset-bottom))",
         }}
