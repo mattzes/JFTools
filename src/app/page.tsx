@@ -46,8 +46,8 @@ export default function UebersichtPage() {
 
   // Abzeichen fällig im laufenden Jahr
   const lspFaellig = jugend.filter((p) => {
-    const j = p.leistungsspangeJahr ?? (p.geburtsdatum ? leistungsspangeVorschlag(p.geburtsdatum) : null);
-    return j === jahr;
+    if (p.leistungsspangeDatum || !p.geburtsdatum) return false; // absolviert oder ohne Geburtsdatum
+    return leistungsspangeVorschlag(p.geburtsdatum) === jahr;
   }).length;
   const jf2Faellig = jugend.filter((p) => !p.jugendflamme2 && p.jugendflamme1 && p.geburtsdatum && jahr - new Date(p.geburtsdatum).getFullYear() >= 13).length;
   const jf1Faellig = jugend.filter((p) => !p.jugendflamme1 && p.geburtsdatum && jahr - new Date(p.geburtsdatum).getFullYear() >= 10).length;

@@ -28,7 +28,7 @@ const personBaseSchema = z.object({
   sitzplaetze: z.number().int().min(0).max(9).nullish(),
   jugendflamme1: isoDate.nullish(),
   jugendflamme2: isoDate.nullish(),
-  leistungsspangeJahr: z.number().int().min(1990).max(2100).nullish(),
+  leistungsspangeDatum: isoDate.nullish(),
   aktiv: z.boolean().default(true),
 });
 

@@ -21,14 +21,14 @@ type FormState = {
   sitzplaetze: string;
   jugendflamme1: string;
   jugendflamme2: string;
-  leistungsspangeJahr: string;
+  leistungsspangeDatum: string;
   aktiv: boolean;
 };
 
 const EMPTY_FORM: FormState = {
   rolle: "jugendlich", vorname: "", nachname: "", strasse: "", plz: "", ort: "",
   ausweisnr: "", geburtsdatum: "", eintrittsdatum: "", geschlecht: "", sitzplaetze: "",
-  jugendflamme1: "", jugendflamme2: "", leistungsspangeJahr: "", aktiv: true,
+  jugendflamme1: "", jugendflamme2: "", leistungsspangeDatum: "", aktiv: true,
 };
 
 export default function PersonenPage() {
@@ -55,7 +55,6 @@ export default function PersonenPage() {
   const selHind = sel ? hindernisse?.find((h) => h.personId === sel.id) : null;
   const jugend = personen.filter((p) => p.aktiv && p.rolle === "jugendlich").length;
   const betr = personen.filter((p) => p.aktiv && p.rolle === "betreuer").length;
-  const jahr = new Date().getFullYear();
 
   function openEdit(p?: Person) {
     setFehler(null);
@@ -67,7 +66,7 @@ export default function PersonenPage() {
       eintrittsdatum: p.eintrittsdatum ?? "", geschlecht: p.geschlecht ?? "",
       sitzplaetze: p.sitzplaetze != null ? String(p.sitzplaetze) : "",
       jugendflamme1: p.jugendflamme1 ?? "", jugendflamme2: p.jugendflamme2 ?? "",
-      leistungsspangeJahr: p.leistungsspangeJahr != null ? String(p.leistungsspangeJahr) : "",
+      leistungsspangeDatum: p.leistungsspangeDatum ?? "",
       aktiv: p.aktiv,
     });
   }
@@ -105,7 +104,7 @@ export default function PersonenPage() {
       sitzplaetze: istBetreuer && form.sitzplaetze !== "" ? Number(form.sitzplaetze) : null,
       jugendflamme1: istBetreuer ? null : form.jugendflamme1 || null,
       jugendflamme2: istBetreuer ? null : form.jugendflamme2 || null,
-      leistungsspangeJahr: !istBetreuer && form.leistungsspangeJahr !== "" ? Number(form.leistungsspangeJahr) : null,
+      leistungsspangeDatum: !istBetreuer && form.leistungsspangeDatum ? form.leistungsspangeDatum : null,
       aktiv: form.aktiv,
     };
     try {
@@ -158,6 +157,8 @@ export default function PersonenPage() {
                   <tr>
                     <th>Name</th>
                     <th>Rolle</th>
+                    <th>Geburtsdatum</th>
+                    <th>Ausweis-Nr.</th>
                     <th style={{ textAlign: "center" }}>Jahrg.-Alter</th>
                     <th style={{ textAlign: "center" }}>JF1</th>
                     <th style={{ textAlign: "center" }}>JF2</th>
@@ -165,33 +166,37 @@ export default function PersonenPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {liste.map((p) => {
-                    const lspGeplant = p.leistungsspangeJahr != null && p.leistungsspangeJahr > jahr;
-                    return (
-                      <tr key={p.id} onClick={() => setSelId(p.id)} style={{ cursor: "pointer", opacity: p.aktiv ? 1 : 0.45 }}>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                            <Avatar name={personName(p)} />
-                            <div style={{ lineHeight: 1.15 }}>
-                              <div style={{ fontSize: 13, fontWeight: 500 }}>{personName(p)}</div>
-                              <div style={{ fontSize: 10, color: "var(--color-neutral-600)" }}>{p.ausweisnr ? `Nr. ${p.ausweisnr}` : "—"}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="ph-tag" style={p.rolle === "betreuer" ? { background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" } : { background: "var(--color-neutral-800)", color: "var(--color-neutral-200)" }}>
-                            {p.rolle === "betreuer" ? "Betreuer" : "Jugendlich"}
+                  {liste.map((p) => (
+                    <tr key={p.id} onClick={() => setSelId(p.id)} style={{ cursor: "pointer", opacity: p.aktiv ? 1 : 0.45 }}>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                          <Avatar name={personName(p)} />
+                          <div style={{ fontSize: 13, fontWeight: 500 }}>{personName(p)}</div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="ph-tag" style={p.rolle === "betreuer" ? { background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" } : { background: "var(--color-neutral-800)", color: "var(--color-neutral-200)" }}>
+                          {p.rolle === "betreuer" ? "Betreuer" : "Jugendlich"}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12.5, color: p.geburtsdatum ? "var(--color-text)" : "var(--color-neutral-600)" }}>{fmtDate(p.geburtsdatum)}</td>
+                      <td style={{ fontSize: 12.5, color: p.ausweisnr ? "var(--color-text)" : "var(--color-neutral-600)" }}>{p.ausweisnr ?? "—"}</td>
+                      <td style={{ textAlign: "center", fontWeight: 500 }}>{p.geburtsdatum ? alterInDiesemJahr(p.geburtsdatum) : "—"}</td>
+                      <td style={{ textAlign: "center" }}>{p.jugendflamme1 && <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} />}</td>
+                      <td style={{ textAlign: "center" }}>{p.jugendflamme2 && <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} />}</td>
+                      <td style={{ fontSize: 12.5 }}>
+                        {p.leistungsspangeDatum ? (
+                          <span style={{ color: "var(--color-accent-300)" }}>
+                            <i className="ph ph-medal" style={{ marginRight: 4 }} />{fmtDate(p.leistungsspangeDatum)}
                           </span>
-                        </td>
-                        <td style={{ textAlign: "center", fontWeight: 500 }}>{p.geburtsdatum ? alterInDiesemJahr(p.geburtsdatum) : "—"}</td>
-                        <td style={{ textAlign: "center" }}>{p.jugendflamme1 && <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} />}</td>
-                        <td style={{ textAlign: "center" }}>{p.jugendflamme2 && <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} />}</td>
-                        <td style={{ fontSize: 12.5, color: lspGeplant ? "var(--warn)" : "var(--color-text)" }}>
-                          {p.leistungsspangeJahr != null ? `${p.leistungsspangeJahr}${lspGeplant ? " (geplant)" : ""}` : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        ) : p.geburtsdatum ? (
+                          <span style={{ color: "var(--color-neutral-500)" }}>Vorschlag {leistungsspangeVorschlag(p.geburtsdatum)}</span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
 
@@ -280,13 +285,13 @@ export default function PersonenPage() {
                   <BadgeRow
                     label="Leistungsspange"
                     value={
-                      sel.leistungsspangeJahr != null
-                        ? String(sel.leistungsspangeJahr)
+                      sel.leistungsspangeDatum
+                        ? fmtDate(sel.leistungsspangeDatum)
                         : sel.geburtsdatum
                           ? `Vorschlag ${leistungsspangeVorschlag(sel.geburtsdatum)}`
                           : "—"
                     }
-                    done={sel.leistungsspangeJahr != null && sel.leistungsspangeJahr <= jahr}
+                    done={!!sel.leistungsspangeDatum}
                   />
                 </div>
 
@@ -387,9 +392,20 @@ export default function PersonenPage() {
             )}
           </div>
 
-          {form.rolle === "betreuer" && (
+          {form.rolle === "betreuer" ? (
             <Field label="Sitzplätze im PKW (für Fahrgemeinschaften) *">
               <input type="number" min={0} max={9} className="input" value={form.sitzplaetze} onChange={(e) => setForm({ ...form, sitzplaetze: e.target.value })} />
+            </Field>
+          ) : (
+            <Field
+              label={`Leistungsspange — Datum der Abnahme${
+                form.geburtsdatum ? ` · Vorschlag ${leistungsspangeVorschlag(form.geburtsdatum)}` : ""
+              }`}
+            >
+              <DatePicker value={form.leistungsspangeDatum} onChange={(v) => setForm({ ...form, leistungsspangeDatum: v })} />
+              <div style={{ fontSize: 10.5, color: "var(--color-neutral-500)", marginTop: 4 }}>
+                Nur ausfüllen, wenn die Leistungsspange tatsächlich absolviert wurde.
+              </div>
             </Field>
           )}
 

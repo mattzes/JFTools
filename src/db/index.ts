@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS personen (
   strasse TEXT, plz TEXT, ort TEXT, ausweisnr TEXT,
   geburtsdatum TEXT, eintrittsdatum TEXT, geschlecht TEXT,
   sitzplaetze INTEGER,
-  jugendflamme1 TEXT, jugendflamme2 TEXT, leistungsspange_jahr INTEGER,
+  jugendflamme1 TEXT, jugendflamme2 TEXT, leistungsspange_datum TEXT,
   aktiv INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -128,12 +128,32 @@ const TERMINE_SEED: Array<[string, string, string | null, string, string]> = [
   ["Kreiszeltlager", "2026-07-17", "2026-07-26", "nur_gruppen", "alle"],
 ];
 
+// Leichte, idempotente Spalten-Migrationen für bereits bestehende Datenbanken
+// (CREATE TABLE IF NOT EXISTS legt neue Spalten sonst nicht nach).
+function migrate(sqlite: Database.Database) {
+  const cols = sqlite.prepare("PRAGMA table_info(personen)").all() as { name: string }[];
+  const has = (name: string) => cols.some((c) => c.name === name);
+  if (!has("leistungsspange_datum")) {
+    sqlite.exec("ALTER TABLE personen ADD COLUMN leistungsspange_datum TEXT");
+    // Altbestand: nur bereits erworbene (vergangene) Jahre als 15.05. übernehmen.
+    // Zukünftige „geplante" Jahre bleiben leer und erscheinen als Vorschlag.
+    if (has("leistungsspange_jahr")) {
+      sqlite.exec(
+        "UPDATE personen SET leistungsspange_datum = leistungsspange_jahr || '-05-15' " +
+          "WHERE leistungsspange_jahr IS NOT NULL AND leistungsspange_datum IS NULL " +
+          "AND leistungsspange_jahr <= CAST(strftime('%Y','now') AS INTEGER)",
+      );
+    }
+  }
+}
+
 function init() {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const sqlite = new Database(DB_PATH);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
   sqlite.exec(DDL);
+  migrate(sqlite);
 
   // Seed nur bei leerem Datenbestand
   const terminCount = sqlite.prepare("SELECT COUNT(*) AS n FROM termine").get() as { n: number };

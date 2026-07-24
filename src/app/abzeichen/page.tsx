@@ -25,9 +25,9 @@ export default function AbzeichenPage() {
     const gebJahr = new Date(p.geburtsdatum).getFullYear();
     const jga = alterInDiesemJahr(p.geburtsdatum);
 
-    // Leistungsspange: geplantes/erworbenes Jahr oder Vorschlag geburtsjahr+15
-    if (p.leistungsspangeJahr == null || p.leistungsspangeJahr >= jahr) {
-      const y = p.leistungsspangeJahr ?? leistungsspangeVorschlag(p.geburtsdatum);
+    // Leistungsspange: nur wenn noch nicht absolviert → Vorschlag geburtsjahr+15
+    if (!p.leistungsspangeDatum) {
+      const y = leistungsspangeVorschlag(p.geburtsdatum);
       if (y >= jahr) eintraege.push({ jahr: y, typ: "Leistungsspange", name: personName(p) });
     }
     // JF2: fällig ab Jahrgangsalter 13, wenn noch nicht erledigt & JF1 vorhanden

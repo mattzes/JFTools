@@ -52,7 +52,7 @@ export type Person = {
   sitzplaetze: number | null;
   jugendflamme1: string | null;
   jugendflamme2: string | null;
-  leistungsspangeJahr: number | null;
+  leistungsspangeDatum: string | null;
   aktiv: boolean;
 };
 
