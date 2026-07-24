@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { api, useApi, Person, personName } from "@/lib/api";
 import { Avatar, DatePicker, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
-import { alter, alterInDiesemJahr, leistungsspangeVorschlag, geburtsdatumPlausibel } from "@/lib/domain/alter";
+import { alter, alterInDiesemJahr, leistungsspangeVorschlag, jugendflamme1Vorschlag, jugendflamme2Vorschlag, geburtsdatumPlausibel } from "@/lib/domain/alter";
 
 type FormState = {
   id?: number;
@@ -149,13 +149,15 @@ export default function PersonenPage() {
                     <th>Geburtsdatum</th>
                     <th>Ausweis-Nr.</th>
                     <th style={{ textAlign: "center" }}>Jahrg.-Alter</th>
-                    <th style={{ textAlign: "center" }}>JFL1</th>
-                    <th style={{ textAlign: "center" }}>JFL2</th>
+                    <th>JFL1</th>
+                    <th>JFL2</th>
                     <th>LSP</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {liste.map((p) => (
+                  {liste.map((p) => {
+                    const jfl2v = jugendflamme2Vorschlag(p.geburtsdatum, p.jugendflamme1);
+                    return (
                     <tr key={p.id} onClick={() => setSelId(p.id)} style={{ cursor: "pointer", opacity: p.aktiv ? 1 : 0.45 }}>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -171,8 +173,24 @@ export default function PersonenPage() {
                       <td style={{ fontSize: 12.5 }}>{p.geburtsdatum ? fmtDate(p.geburtsdatum) : <Dash />}</td>
                       <td style={{ fontSize: 12.5 }}>{p.ausweisnr ? p.ausweisnr : <Dash />}</td>
                       <td style={{ textAlign: "center" }}>{p.geburtsdatum ? <span style={{ fontWeight: 500 }}>{alterInDiesemJahr(p.geburtsdatum)}</span> : <Dash />}</td>
-                      <td style={{ textAlign: "center" }}>{p.jugendflamme1 ? <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} /> : <Dash />}</td>
-                      <td style={{ textAlign: "center" }}>{p.jugendflamme2 ? <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} /> : <Dash />}</td>
+                      <td style={{ fontSize: 12.5 }}>
+                        {p.jugendflamme1 ? (
+                          <span style={{ color: "var(--color-accent-300)" }}><i className="ph ph-check" style={{ marginRight: 4 }} />{fmtDate(p.jugendflamme1)}</span>
+                        ) : p.eintrittsdatum ? (
+                          <span style={{ color: "var(--color-neutral-500)" }}>Vorschlag {jugendflamme1Vorschlag(p.eintrittsdatum)}</span>
+                        ) : (
+                          <Dash />
+                        )}
+                      </td>
+                      <td style={{ fontSize: 12.5 }}>
+                        {p.jugendflamme2 ? (
+                          <span style={{ color: "var(--color-accent-300)" }}><i className="ph ph-check" style={{ marginRight: 4 }} />{fmtDate(p.jugendflamme2)}</span>
+                        ) : jfl2v != null ? (
+                          <span style={{ color: "var(--color-neutral-500)" }}>Vorschlag {jfl2v}</span>
+                        ) : (
+                          <Dash />
+                        )}
+                      </td>
                       <td style={{ fontSize: 12.5 }}>
                         {p.leistungsspangeDatum ? (
                           <span style={{ color: "var(--color-accent-300)" }}>
@@ -185,7 +203,8 @@ export default function PersonenPage() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
 
@@ -269,8 +288,28 @@ export default function PersonenPage() {
               <>
                 <SectionLabel>Abzeichen</SectionLabel>
                 <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
-                  <BadgeRow label="Jugendflamme 1" value={fmtDate(sel.jugendflamme1)} done={!!sel.jugendflamme1} />
-                  <BadgeRow label="Jugendflamme 2" value={fmtDate(sel.jugendflamme2)} done={!!sel.jugendflamme2} />
+                  <BadgeRow
+                    label="Jugendflamme 1"
+                    value={
+                      sel.jugendflamme1
+                        ? fmtDate(sel.jugendflamme1)
+                        : sel.eintrittsdatum
+                          ? `Vorschlag ${jugendflamme1Vorschlag(sel.eintrittsdatum)}`
+                          : "—"
+                    }
+                    done={!!sel.jugendflamme1}
+                  />
+                  <BadgeRow
+                    label="Jugendflamme 2"
+                    value={
+                      sel.jugendflamme2
+                        ? fmtDate(sel.jugendflamme2)
+                        : jugendflamme2Vorschlag(sel.geburtsdatum, sel.jugendflamme1) != null
+                          ? `Vorschlag ${jugendflamme2Vorschlag(sel.geburtsdatum, sel.jugendflamme1)}`
+                          : "—"
+                    }
+                    done={!!sel.jugendflamme2}
+                  />
                   <BadgeRow
                     label="Leistungsspange"
                     value={

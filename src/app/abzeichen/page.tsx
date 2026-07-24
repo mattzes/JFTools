@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useApi, Person, personName } from "@/lib/api";
 import { PageHeader, Spinner, Empty } from "@/components/ui";
-import { leistungsspangeVorschlag, alterInDiesemJahr } from "@/lib/domain/alter";
+import { leistungsspangeVorschlag, jugendflamme1Vorschlag, jugendflamme2Vorschlag } from "@/lib/domain/alter";
 
 type Filter = "alle" | "lsp" | "jf2" | "jf1";
 
@@ -21,24 +21,18 @@ export default function AbzeichenPage() {
   const eintraege: Eintrag[] = [];
 
   for (const p of jugend) {
-    if (!p.geburtsdatum) continue;
-    const gebJahr = new Date(p.geburtsdatum).getFullYear();
-    const jga = alterInDiesemJahr(p.geburtsdatum);
-
-    // Leistungsspange: nur wenn noch nicht absolviert → Vorschlag geburtsjahr+16
-    if (!p.leistungsspangeDatum) {
-      const y = leistungsspangeVorschlag(p.geburtsdatum);
-      if (y >= jahr) eintraege.push({ jahr: y, typ: "Leistungsspange", name: personName(p) });
+    // JFL1: ein Jahr nach Eintritt (nur wenn noch nicht erledigt & Eintrittsdatum bekannt)
+    if (!p.jugendflamme1 && p.eintrittsdatum) {
+      eintraege.push({ jahr: jugendflamme1Vorschlag(p.eintrittsdatum), typ: "Jugendflamme 1", name: personName(p) });
     }
-    // JF2: fällig ab Jahrgangsalter 13, wenn noch nicht erledigt & JF1 vorhanden
+    // JFL2: erst vorschlagen, wenn JFL1 eingetragen ist
     if (!p.jugendflamme2) {
-      const y = Math.max(jahr, gebJahr + 13);
-      if (p.jugendflamme1 || jga >= 13) eintraege.push({ jahr: y, typ: "Jugendflamme 2", name: personName(p) });
+      const y = jugendflamme2Vorschlag(p.geburtsdatum, p.jugendflamme1);
+      if (y != null) eintraege.push({ jahr: y, typ: "Jugendflamme 2", name: personName(p) });
     }
-    // JF1: fällig ab Jahrgangsalter 10, wenn noch nicht erledigt
-    if (!p.jugendflamme1) {
-      const y = Math.max(jahr, gebJahr + 10);
-      eintraege.push({ jahr: y, typ: "Jugendflamme 1", name: personName(p) });
+    // Leistungsspange: nur wenn noch nicht absolviert → Vorschlag geburtsjahr+16
+    if (!p.leistungsspangeDatum && p.geburtsdatum) {
+      eintraege.push({ jahr: leistungsspangeVorschlag(p.geburtsdatum), typ: "Leistungsspange", name: personName(p) });
     }
   }
 

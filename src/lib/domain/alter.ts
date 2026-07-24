@@ -14,10 +14,34 @@ export function alterInDiesemJahr(geburtsdatum: string | Date, jahr = new Date()
   return jahr - geb.getFullYear();
 }
 
+// Ein Vorschlagsjahr in der Vergangenheit ergibt keinen Sinn → auf das aktuelle Jahr anheben.
+function abJetzt(jahr: number): number {
+  return Math.max(jahr, new Date().getFullYear());
+}
+
 // Leistungsspangen-Vorschlag: möglich ab dem Kalenderjahr, in dem die Person 16 wird
 export function leistungsspangeVorschlag(geburtsdatum: string | Date): number {
   const geb = typeof geburtsdatum === "string" ? new Date(geburtsdatum) : geburtsdatum;
-  return geb.getFullYear() + 16;
+  return abJetzt(geb.getFullYear() + 16);
+}
+
+// Jugendflamme-1-Vorschlag: ein Jahr nach dem Eintritt
+export function jugendflamme1Vorschlag(eintrittsdatum: string | Date): number {
+  const ein = typeof eintrittsdatum === "string" ? new Date(eintrittsdatum) : eintrittsdatum;
+  return abJetzt(ein.getFullYear() + 1);
+}
+
+// Jugendflamme-2-Vorschlag: mindestens 1 Jahr nach der JFL1 UND frühestens im Jahrgang,
+// in dem die Person 13 wird. Ohne eingetragene JFL1 gibt es keinen Vorschlag.
+export function jugendflamme2Vorschlag(
+  geburtsdatum: string | Date | null | undefined,
+  jugendflamme1: string | Date | null | undefined,
+): number | null {
+  if (!jugendflamme1) return null;
+  const jfl1Jahr = new Date(jugendflamme1).getFullYear();
+  const geb13 = geburtsdatum ? new Date(geburtsdatum).getFullYear() + 13 : null;
+  const basis = geb13 != null ? Math.max(jfl1Jahr + 1, geb13) : jfl1Jahr + 1;
+  return abJetzt(basis);
 }
 
 export function sollZeit(alterssumme: number) {
