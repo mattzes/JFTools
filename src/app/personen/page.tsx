@@ -160,8 +160,8 @@ export default function PersonenPage() {
                     <th>Geburtsdatum</th>
                     <th>Ausweis-Nr.</th>
                     <th style={{ textAlign: "center" }}>Jahrg.-Alter</th>
-                    <th style={{ textAlign: "center" }}>JF1</th>
-                    <th style={{ textAlign: "center" }}>JF2</th>
+                    <th style={{ textAlign: "center" }}>JFL1</th>
+                    <th style={{ textAlign: "center" }}>JFL2</th>
                     <th>Leistungsspange</th>
                   </tr>
                 </thead>
@@ -179,11 +179,11 @@ export default function PersonenPage() {
                           {p.rolle === "betreuer" ? "Betreuer" : "Jugendlich"}
                         </span>
                       </td>
-                      <td style={{ fontSize: 12.5, color: p.geburtsdatum ? "var(--color-text)" : "var(--color-neutral-600)" }}>{fmtDate(p.geburtsdatum)}</td>
-                      <td style={{ fontSize: 12.5, color: p.ausweisnr ? "var(--color-text)" : "var(--color-neutral-600)" }}>{p.ausweisnr ?? "—"}</td>
-                      <td style={{ textAlign: "center", fontWeight: 500 }}>{p.geburtsdatum ? alterInDiesemJahr(p.geburtsdatum) : "—"}</td>
-                      <td style={{ textAlign: "center" }}>{p.jugendflamme1 && <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} />}</td>
-                      <td style={{ textAlign: "center" }}>{p.jugendflamme2 && <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} />}</td>
+                      <td style={{ fontSize: 12.5 }}>{p.geburtsdatum ? fmtDate(p.geburtsdatum) : <Dash />}</td>
+                      <td style={{ fontSize: 12.5 }}>{p.ausweisnr ? p.ausweisnr : <Dash />}</td>
+                      <td style={{ textAlign: "center" }}>{p.geburtsdatum ? <span style={{ fontWeight: 500 }}>{alterInDiesemJahr(p.geburtsdatum)}</span> : <Dash />}</td>
+                      <td style={{ textAlign: "center" }}>{p.jugendflamme1 ? <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} /> : <Dash />}</td>
+                      <td style={{ textAlign: "center" }}>{p.jugendflamme2 ? <i className="ph ph-check" style={{ color: "var(--color-accent-300)" }} /> : <Dash />}</td>
                       <td style={{ fontSize: 12.5 }}>
                         {p.leistungsspangeDatum ? (
                           <span style={{ color: "var(--color-accent-300)" }}>
@@ -192,7 +192,7 @@ export default function PersonenPage() {
                         ) : p.geburtsdatum ? (
                           <span style={{ color: "var(--color-neutral-500)" }}>Vorschlag {leistungsspangeVorschlag(p.geburtsdatum)}</span>
                         ) : (
-                          "—"
+                          <Dash />
                         )}
                       </td>
                     </tr>
@@ -458,6 +458,11 @@ function BadgeRow({ label, value, done }: { label: string; value: string; done: 
       <span style={{ marginLeft: "auto", color: "var(--color-neutral-500)" }}>{value}</span>
     </div>
   );
+}
+
+// Einheitliche Darstellung fehlender Werte
+function Dash() {
+  return <span style={{ color: "var(--color-neutral-600)" }}>—</span>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
