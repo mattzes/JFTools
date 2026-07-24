@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { api, useApi, Person, HindernisFaehigkeit, personName } from "@/lib/api";
+import { api, useApi, Person, personName } from "@/lib/api";
 import { Avatar, DatePicker, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
 import { alter, alterInDiesemJahr, leistungsspangeVorschlag, geburtsdatumPlausibel } from "@/lib/domain/alter";
-import { HINDERNIS_MATERIAL, HINDERNIS_STATUS } from "@/lib/domain/constants";
 
 type FormState = {
   id?: number;
@@ -33,7 +32,6 @@ const EMPTY_FORM: FormState = {
 
 export default function PersonenPage() {
   const { data: personen, reload } = useApi<Person[]>("/personen");
-  const { data: hindernisse, reload: reloadHind } = useApi<HindernisFaehigkeit[]>("/hindernis");
   const [suche, setSuche] = useState("");
   const [selId, setSelId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
@@ -52,7 +50,6 @@ export default function PersonenPage() {
   if (!personen) return <Spinner />;
 
   const sel = personen.find((p) => p.id === selId) ?? null;
-  const selHind = sel ? hindernisse?.find((h) => h.personId === sel.id) : null;
   const jugend = personen.filter((p) => p.aktiv && p.rolle === "jugendlich").length;
   const betr = personen.filter((p) => p.aktiv && p.rolle === "betreuer").length;
 
@@ -118,14 +115,6 @@ export default function PersonenPage() {
     } catch (e) {
       setFehler(e instanceof Error ? e.message : String(e));
     }
-  }
-
-  async function setHindernis(p: Person, material: string, status: string) {
-    await api("/hindernis", {
-      method: "PUT",
-      body: JSON.stringify({ personId: p.id, hindernis: "Wassergraben", material, status }),
-    });
-    reloadHind();
   }
 
   return (
@@ -293,30 +282,6 @@ export default function PersonenPage() {
                     }
                     done={!!sel.leistungsspangeDatum}
                   />
-                </div>
-
-                <SectionLabel>Wassergraben (A-Teil)</SectionLabel>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-                  <select
-                    className="input"
-                    value={selHind ? `${selHind.material}|${selHind.status}` : ""}
-                    onChange={(e) => {
-                      const [material, status] = e.target.value.split("|");
-                      if (material && status) setHindernis(sel, material, status);
-                    }}
-                  >
-                    <option value="">— nicht erfasst —</option>
-                    {HINDERNIS_MATERIAL.flatMap((m) =>
-                      HINDERNIS_STATUS.map((s) => (
-                        <option key={`${m}|${s}`} value={`${m}|${s}`}>
-                          {m === "ohne" ? "ohne Material" : m === "verteiler" ? "mit Verteiler" : "mit Schlauchpaket"} · {s}
-                        </option>
-                      )),
-                    )}
-                  </select>
-                  <div style={{ fontSize: 10.5, color: "var(--color-neutral-500)" }}>
-                    Welche Material-Kombination schafft die Person fehlerfrei über den Wassergraben?
-                  </div>
                 </div>
               </>
             )}
