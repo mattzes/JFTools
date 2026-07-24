@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, HindernisFaehigkeit, personName } from "@/lib/api";
-import { Avatar, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
+import { Avatar, DatePicker, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
 import { alter, alterInDiesemJahr, leistungsspangeVorschlag, geburtsdatumPlausibel } from "@/lib/domain/alter";
 import { HINDERNIS_MATERIAL, HINDERNIS_STATUS } from "@/lib/domain/constants";
 
@@ -357,10 +357,10 @@ export default function PersonenPage() {
             {form.rolle === "jugendlich" && (
               <>
                 <Field label="Geburtsdatum *">
-                  <input type="date" className="input" value={form.geburtsdatum} onChange={(e) => setForm({ ...form, geburtsdatum: e.target.value })} />
+                  <DatePicker value={form.geburtsdatum} onChange={(v) => setForm({ ...form, geburtsdatum: v })} clearable={false} />
                 </Field>
                 <Field label="Eintrittsdatum *">
-                  <input type="date" className="input" value={form.eintrittsdatum} onChange={(e) => setForm({ ...form, eintrittsdatum: e.target.value })} />
+                  <DatePicker value={form.eintrittsdatum} onChange={(v) => setForm({ ...form, eintrittsdatum: v })} clearable={false} />
                 </Field>
                 <Field label="Geschlecht *">
                   <select className="input" value={form.geschlecht} onChange={(e) => setForm({ ...form, geschlecht: e.target.value as FormState["geschlecht"] })}>

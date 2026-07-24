@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, Disziplin, Messung, personName } from "@/lib/api";
-import { Avatar, Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
+import { Avatar, DatePicker, Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
 
 export default function TrainingPage() {
   const { data: personen } = useApi<Person[]>("/personen");
@@ -228,7 +228,7 @@ function ErfassenDialog({
       <div className="grid grid-cols-2 gap-3">
         <div className="field">
           <label>Datum</label>
-          <input type="date" className="input" value={datum} onChange={(e) => setDatum(e.target.value)} />
+          <DatePicker value={datum} onChange={setDatum} clearable={false} />
         </div>
         <div className="field">
           <label>Zeit (Sekunden)</label>

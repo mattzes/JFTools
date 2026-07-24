@@ -208,6 +208,45 @@ select.input { appearance: auto; }
   font-weight: 600; background: var(--color-accent-800); color: var(--color-accent-100);
 }
 
+/* ── datepicker (eigenes Design, kein natives Control) ── */
+.dp-trigger { display: flex; align-items: center; gap: 8px; text-align: left; }
+.dp-trigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dp-trigger .dp-ph { color: var(--color-neutral-600); }
+.dp-trigger > i { color: var(--color-neutral-500); font-size: 16px; }
+
+.dp-pop {
+  position: fixed; z-index: 70; width: 268px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px; border-radius: var(--radius-lg);
+  background: var(--color-surface); box-shadow: var(--shadow-md);
+  font-family: var(--font-body);
+}
+.dp-head { display: flex; align-items: center; gap: 4px; }
+.dp-title { flex: 1; text-align: center; font-family: var(--font-heading); font-weight: 500; font-size: 14px; }
+.dp-nav {
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--color-text);
+  border-radius: var(--radius-md); cursor: pointer; font-size: 15px;
+}
+.dp-nav:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); }
+.dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dp-wd {
+  text-align: center; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--color-neutral-500); padding-bottom: 4px;
+}
+.dp-day {
+  aspect-ratio: 1; display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--color-text);
+  border-radius: var(--radius-md); cursor: pointer; font: inherit; font-size: 13px;
+}
+.dp-day:hover { background: color-mix(in srgb, var(--color-text) 9%, transparent); }
+.dp-day[data-out="true"] { color: var(--color-neutral-600); }
+.dp-day[data-today="true"] { box-shadow: inset 0 0 0 1px var(--color-accent); }
+.dp-day[data-sel="true"], .dp-day[data-sel="true"]:hover {
+  background: var(--color-accent); color: #0d0e15; font-weight: 600;
+}
+.dp-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 2px; }
+
 /* Topbar wie im Mockup */
 .topbar {
   display: flex; align-items: center; gap: 14px;

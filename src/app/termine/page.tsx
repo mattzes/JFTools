@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { api, useApi, Person, Termin, Verfuegbarkeit, personName } from "@/lib/api";
-import { Dialog, Empty, ModeTag, PageHeader, Spinner, fmtDate, fmtDateShort, Avatar } from "@/components/ui";
+import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, fmtDate, fmtDateShort, Avatar } from "@/components/ui";
 import { PLANUNGSMODI, ZIELGRUPPEN, Planungsmodus, Zielgruppe } from "@/lib/domain/constants";
 
 const STATUS_CELL = {
@@ -154,11 +154,11 @@ export default function TerminePage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="field">
               <label>Datum von *</label>
-              <input type="date" className="input" value={form.datumVon} onChange={(e) => setForm({ ...form, datumVon: e.target.value })} />
+              <DatePicker value={form.datumVon} onChange={(v) => setForm({ ...form, datumVon: v })} clearable={false} />
             </div>
             <div className="field">
               <label>Datum bis (mehrtägig)</label>
-              <input type="date" className="input" value={form.datumBis} onChange={(e) => setForm({ ...form, datumBis: e.target.value })} />
+              <DatePicker value={form.datumBis} onChange={(v) => setForm({ ...form, datumBis: v })} />
             </div>
           </div>
           <div className="field">
