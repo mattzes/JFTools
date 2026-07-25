@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { api, useApi, Person, Termin, Verfuegbarkeit, personName } from "@/lib/api";
-import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, fmtDate, fmtDateShort, Avatar } from "@/components/ui";
+import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, fmtDate, fmtDateShort } from "@/components/ui";
 import { PLANUNGSMODI, ZIELGRUPPEN, Planungsmodus, Zielgruppe } from "@/lib/domain/constants";
 
 const STATUS_CELL = {
@@ -112,7 +112,7 @@ export default function TerminePage() {
       ) : (
         <>
           {/* Desktop: Matrix oder Liste */}
-          <div className="hidden lg:flex" style={{ flex: 1, overflow: "auto", padding: "8px 18px 0" }}>
+          <div className="hidden lg:flex" style={{ flex: 1, overflow: "auto", padding: "8px 18px 0", alignItems: "flex-start" }}>
             {ansicht === "matrix" ? (
               <MatrixView aktive={aktive} termine={termine} cellMap={cellMap} zielPersonen={zielPersonen} onCycle={cycle} />
             ) : (
@@ -231,19 +231,19 @@ function MatrixView({
     <table className="table" style={{ minWidth: 640 }}>
       <thead>
         <tr>
-          <th style={{ minWidth: 150 }}>Person</th>
+          <th style={{ minWidth: 150 }}>Name</th>
           {termine.map((t) => {
             const ziel = zielPersonen(t);
             const ja = ziel.filter((p) => cellMap.get(`${p.id}:${t.id}`) === "ja").length;
             const d = fmtDateShort(t.datumVon);
             return (
-              <th key={t.id} style={{ textAlign: "center", paddingBottom: 8 }}>
+              <th key={t.id} style={{ textAlign: "center", paddingBottom: 8, verticalAlign: "top" }}>
                 <div style={{ fontSize: 12, color: "var(--color-text)", fontWeight: 600 }}>{d.tag}. {d.mon}</div>
-                <div style={{ margin: "4px 0 3px", display: "flex", justifyContent: "center" }}>
-                  <ModeTag modus={t.planungsmodus} short />
+                <div style={{ margin: "4px auto 2px", maxWidth: 96, fontSize: 10.5, fontWeight: 400, color: "var(--color-neutral-400)", textTransform: "none", letterSpacing: 0, whiteSpace: "normal", lineHeight: 1.25 }}>
+                  {t.titel}
                 </div>
                 <div style={{ fontSize: 10, color: "var(--color-neutral-500)", textTransform: "none", letterSpacing: 0 }}>
-                  {t.titel.length > 14 ? t.titel.slice(0, 13) + "…" : t.titel} · {ja}/{ziel.length}
+                  {ja}/{ziel.length}
                 </div>
               </th>
             );
@@ -254,10 +254,7 @@ function MatrixView({
         {aktive.map((p) => (
           <tr key={p.id}>
             <td>
-              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <Avatar name={personName(p)} size={24} />
-                <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
-              </div>
+              <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
             </td>
             {termine.map((t) => {
               const ziel = zielPersonen(t);
