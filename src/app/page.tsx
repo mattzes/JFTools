@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { api, useApi, Person, Termin, Verfuegbarkeit, Rueckmeldung, Dokumententyp } from "@/lib/api";
 import { Avatar, ModeTag, PageHeader, Spinner, fmtDateShort } from "@/components/ui";
-import { leistungsspangeVorschlag } from "@/lib/domain/alter";
 
 export default function UebersichtPage() {
   const { data: personen } = useApi<Person[]>("/personen");
@@ -44,36 +43,21 @@ export default function UebersichtPage() {
     if (offen > 0) fehltJe.push({ name: d.name, offen });
   }
 
-  // Abzeichen fällig im laufenden Jahr
-  const lspFaellig = jugend.filter((p) => {
-    if (p.leistungsspangeDatum || !p.geburtsdatum) return false; // absolviert oder ohne Geburtsdatum
-    return leistungsspangeVorschlag(p.geburtsdatum) === jahr;
-  }).length;
-  const jf2Faellig = jugend.filter((p) => !p.jugendflamme2 && p.jugendflamme1 && p.geburtsdatum && jahr - new Date(p.geburtsdatum).getFullYear() >= 13).length;
-  const jf1Faellig = jugend.filter((p) => !p.jugendflamme1 && p.geburtsdatum && jahr - new Date(p.geburtsdatum).getFullYear() >= 10).length;
-  const faelligGesamt = lspFaellig + jf2Faellig + jf1Faellig;
-
   const kpis = [
     { n: aktive.length, label: "Aktive Personen", icon: "ph-users-three", iconBg: "var(--color-accent-900)", iconFg: "var(--color-accent-200)", delta: `${jugend.length} J · ${betreuer.length} B` },
     { n: offeneVerf, label: "Offene Verfügbarkeiten", icon: "ph-question", iconBg: "rgba(240,178,58,.16)", iconFg: "var(--warn)", delta: `${termine.filter((t) => (t.datumBis ?? t.datumVon) >= heute).length} Termine` },
     { n: fehlendeRueck, label: "Fehlende Rückmeldungen", icon: "ph-clipboard-text", iconBg: "rgba(232,110,110,.16)", iconFg: "var(--danger)", delta: `${doks.length} Typen` },
-    { n: faelligGesamt, label: `Abzeichen fällig ${jahr}`, icon: "ph-medal", iconBg: "var(--color-accent-900)", iconFg: "var(--color-accent-200)", delta: "" },
   ];
 
   const heuteFmt = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
     <>
-      <PageHeader title="Übersicht" sub={`${heuteFmt} · Saison ${jahr}`}>
-        <Link href="/termine" className="btn btn-primary">
-          <i className="ph ph-plus" />
-          Neuer Termin
-        </Link>
-      </PageHeader>
+      <PageHeader title="Übersicht" sub={`${heuteFmt} · Saison ${jahr}`} />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "18px 18px 24px" }} className="lg:px-6">
         {/* KPIs */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" style={{ marginBottom: 16 }}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3" style={{ marginBottom: 16 }}>
           {kpis.map((k) => (
             <div className="kpi" key={k.label}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -151,49 +135,6 @@ export default function UebersichtPage() {
               ))}
             </div>
 
-            {/* Abzeichen fällig */}
-            <div className="panel">
-              <div className="panel-h">
-                <i className="ph ph-medal" style={{ color: "var(--color-accent-300)" }} />
-                <h4>Abzeichen fällig {jahr}</h4>
-              </div>
-              {[
-                { typ: "Leistungsspange", n: lspFaellig },
-                { typ: "Jugendflamme 2", n: jf2Faellig },
-                { typ: "Jugendflamme 1", n: jf1Faellig },
-              ]
-                .filter((f) => f.n > 0)
-                .map((f) => (
-                  <Link key={f.typ} href="/abzeichen" className="mrow" style={{ textDecoration: "none", color: "inherit" }}>
-                    <span style={{ width: 26, height: 26, flex: "none", borderRadius: 7, display: "grid", placeItems: "center", fontSize: 13, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
-                      <i className="ph ph-medal" />
-                    </span>
-                    <div style={{ flex: 1, fontSize: 12.5, fontWeight: 500 }}>{f.typ}</div>
-                    <span style={{ fontSize: 12, fontWeight: 600 }}>{f.n} Pers.</span>
-                  </Link>
-                ))}
-              {faelligGesamt === 0 && (
-                <div className="mrow" style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
-                  Nichts fällig
-                </div>
-              )}
-            </div>
-
-            {/* Sitzplätze */}
-            <div className="panel" style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
-              <span style={{ width: 40, height: 40, flex: "none", borderRadius: 10, display: "grid", placeItems: "center", fontSize: 20, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
-                <i className="ph ph-car" />
-              </span>
-              <div style={{ flex: 1 }}>
-                <div style={{ font: "600 20px/1 var(--font-heading)" }}>
-                  {betreuer.reduce((a, b) => a + (b.sitzplaetze ?? 0), 0)}{" "}
-                  <span style={{ fontSize: 13, color: "var(--color-neutral-500)", fontWeight: 400 }}>Sitzplätze</span>
-                </div>
-                <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 3 }}>
-                  {betreuer.filter((b) => (b.sitzplaetze ?? 0) > 0).length} Fahrer verfügbar
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
