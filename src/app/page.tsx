@@ -45,8 +45,8 @@ export default function UebersichtPage() {
 
   const kpis = [
     { n: aktive.length, label: "Aktive Personen", icon: "ph-users-three", iconBg: "var(--color-accent-900)", iconFg: "var(--color-accent-200)", delta: `${jugend.length} J · ${betreuer.length} B` },
-    { n: offeneVerf, label: "Offene Verfügbarkeiten", icon: "ph-question", iconBg: "rgba(240,178,58,.16)", iconFg: "var(--warn)", delta: `${termine.filter((t) => (t.datumBis ?? t.datumVon) >= heute).length} Termine` },
-    { n: fehlendeRueck, label: "Fehlende Rückmeldungen", icon: "ph-clipboard-text", iconBg: "rgba(232,110,110,.16)", iconFg: "var(--danger)", delta: `${doks.length} Typen` },
+    { n: offeneVerf, label: "Fehlende Terminrückmeldungen", icon: "ph-question", iconBg: "rgba(240,178,58,.16)", iconFg: "var(--warn)", delta: `${termine.filter((t) => (t.datumBis ?? t.datumVon) >= heute).length} Termine` },
+    { n: fehlendeRueck, label: "Offene Checkliste", icon: "ph-clipboard-text", iconBg: "rgba(232,110,110,.16)", iconFg: "var(--danger)", delta: `${doks.length} Typen` },
   ];
 
   const heuteFmt = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -118,7 +118,7 @@ export default function UebersichtPage() {
             <div className="panel">
               <div className="panel-h">
                 <i className="ph ph-clipboard-text" style={{ color: "var(--warn)" }} />
-                <h4>Offene Rückmeldungen</h4>
+                <h4>Offene Checkliste</h4>
               </div>
               {fehltJe.length === 0 && (
                 <div className="mrow" style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
