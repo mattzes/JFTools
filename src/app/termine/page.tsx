@@ -42,6 +42,7 @@ export default function TerminePage() {
   const { data: termine, reload } = useApi<Termin[]>("/termine");
   const { data: verf, reload: reloadVerf } = useApi<Verfuegbarkeit[]>("/verfuegbarkeiten");
   const [ansicht, setAnsicht] = useState<"matrix" | "liste">("matrix");
+  const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<TerminForm | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -97,6 +98,15 @@ export default function TerminePage() {
   return (
     <>
       <PageHeader title="Termine & Verfügbarkeit" sub={`Saison ${new Date().getFullYear()} · Ja / Nein / offen`}>
+        {ansicht === "matrix" && (
+          <button
+            className={`hidden lg:inline-flex btn ${editMode ? "btn-primary" : "btn-secondary"}`}
+            onClick={() => setEditMode((v) => !v)}
+          >
+            <i className={`ph ${editMode ? "ph-check" : "ph-pencil-simple"}`} />
+            {editMode ? "Bearbeiten fertig" : "Anwesenheiten bearbeiten"}
+          </button>
+        )}
         <div className="seg hidden lg:inline-flex" style={{ fontSize: 12 }}>
           <button className="seg-opt" data-on={ansicht === "matrix"} onClick={() => setAnsicht("matrix")}>Matrix</button>
           <button className="seg-opt" data-on={ansicht === "liste"} onClick={() => setAnsicht("liste")}>Liste</button>
@@ -114,7 +124,7 @@ export default function TerminePage() {
           {/* Desktop: Matrix oder Liste */}
           <div className="hidden lg:flex" style={{ flex: 1, overflow: "auto", padding: "8px 18px 0", alignItems: "flex-start" }}>
             {ansicht === "matrix" ? (
-              <MatrixView aktive={aktive} termine={termine} cellMap={cellMap} zielPersonen={zielPersonen} onCycle={cycle} />
+              <MatrixView aktive={aktive} termine={termine} cellMap={cellMap} zielPersonen={zielPersonen} onCycle={cycle} editMode={editMode} />
             ) : (
               <ListeView termine={termine} verf={verf} zielPersonen={zielPersonen} onEdit={(t) => setForm({ id: t.id, titel: t.titel, datumVon: t.datumVon, datumBis: t.datumBis ?? "", planungsmodus: t.planungsmodus, zielgruppe: t.zielgruppe, ort: t.ort ?? "" })} />
             )}
@@ -220,15 +230,21 @@ function MatrixView({
   cellMap,
   zielPersonen,
   onCycle,
+  editMode,
 }: {
   aktive: Person[];
   termine: Termin[];
   cellMap: Map<string, Verfuegbarkeit["status"]>;
   zielPersonen: (t: Termin) => Person[];
   onCycle: (personId: number, terminId: number) => void;
+  editMode: boolean;
 }) {
   return (
-    <table className="table" style={{ minWidth: 640 }}>
+    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+      <table
+        className="table"
+        style={{ minWidth: 640, ...(editMode ? { boxShadow: "0 0 0 1.5px var(--color-accent-800)", borderRadius: 12 } : {}) }}
+      >
       <thead>
         <tr>
           <th style={{ minWidth: 150 }}>Name</th>
@@ -264,13 +280,21 @@ function MatrixView({
               return (
                 <td key={t.id} style={{ textAlign: "center" }}>
                   {cell ? (
-                    <button
-                      onClick={() => onCycle(p.id, t.id)}
-                      title="klicken zum Wechseln (Ja → Nein → offen)"
-                      style={{ display: "inline-grid", placeItems: "center", width: 26, height: 26, borderRadius: 7, background: cell.bg, color: cell.c, border: 0, cursor: "pointer" }}
-                    >
-                      <i className={`ph-bold ${cell.icon}`} style={{ fontSize: 12 }} />
-                    </button>
+                    editMode ? (
+                      <button
+                        onClick={() => onCycle(p.id, t.id)}
+                        title="klicken zum Wechseln (Ja → Nein → offen)"
+                        style={{ display: "inline-grid", placeItems: "center", width: 26, height: 26, borderRadius: 7, background: cell.bg, color: cell.c, cursor: "pointer", border: 0, boxShadow: "inset 0 0 0 1px var(--color-neutral-600)" }}
+                      >
+                        <i className={`ph-bold ${cell.icon}`} style={{ fontSize: 12 }} />
+                      </button>
+                    ) : (
+                      <span
+                        style={{ display: "inline-grid", placeItems: "center", width: 26, height: 26, borderRadius: 7, background: cell.bg, color: cell.c }}
+                      >
+                        <i className={`ph-bold ${cell.icon}`} style={{ fontSize: 12 }} />
+                      </span>
+                    )
                   ) : (
                     <span style={{ color: "var(--color-neutral-800)" }}>·</span>
                   )}
@@ -280,7 +304,8 @@ function MatrixView({
           </tr>
         ))}
       </tbody>
-    </table>
+      </table>
+    </div>
   );
 }
 
