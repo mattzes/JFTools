@@ -145,10 +145,11 @@ export default function PersonenPage() {
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Rolle</th>
                     <th>Geburtsdatum</th>
+                    <th>Eintrittsdatum</th>
                     <th>Ausweis-Nr.</th>
                     <th style={{ textAlign: "center" }}>Jahrg.-Alter</th>
+                    <th style={{ textAlign: "center" }}>Aktuelles Alter</th>
                     <th>JFL1</th>
                     <th>JFL2</th>
                     <th>LSP</th>
@@ -160,16 +161,27 @@ export default function PersonenPage() {
                     return (
                     <tr key={p.id} onClick={() => setSelId(p.id)} style={{ cursor: "pointer", opacity: p.aktiv ? 1 : 0.45 }}>
                       <td>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>{personName(p)}</div>
-                      </td>
-                      <td>
-                        <span className="ph-tag" style={p.rolle === "betreuer" ? { background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" } : { background: "var(--color-neutral-800)", color: "var(--color-neutral-200)" }}>
-                          {p.rolle === "betreuer" ? "Betreuer" : "Jugendlich"}
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                          <span
+                            title={p.rolle === "betreuer" ? "Betreuer" : "Jugendlich"}
+                            style={{
+                              width: 18, height: 18, flex: "none", borderRadius: 5, display: "inline-grid", placeItems: "center",
+                              fontSize: 10, fontWeight: 700,
+                              ...(p.rolle === "betreuer"
+                                ? { background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" }
+                                : { background: "var(--color-neutral-800)", color: "var(--color-neutral-200)" }),
+                            }}
+                          >
+                            {p.rolle === "betreuer" ? "B" : "J"}
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 500 }}>{personName(p)}</span>
                         </span>
                       </td>
                       <td style={{ fontSize: 12.5 }}>{p.geburtsdatum ? fmtDate(p.geburtsdatum) : <Dash />}</td>
+                      <td style={{ fontSize: 12.5 }}>{p.eintrittsdatum ? fmtDate(p.eintrittsdatum) : <Dash />}</td>
                       <td style={{ fontSize: 12.5 }}>{p.ausweisnr ? p.ausweisnr : <Dash />}</td>
                       <td style={{ textAlign: "center" }}>{p.geburtsdatum ? <span style={{ fontWeight: 500 }}>{alterInDiesemJahr(p.geburtsdatum)}</span> : <Dash />}</td>
+                      <td style={{ textAlign: "center" }}>{p.geburtsdatum ? <span style={{ fontWeight: 500 }}>{alter(p.geburtsdatum)}</span> : <Dash />}</td>
                       <td style={{ fontSize: 12.5 }}>
                         {p.jugendflamme1 ? (
                           <span style={{ color: "var(--color-accent-300)" }}><i className="ph ph-check" style={{ marginRight: 4 }} />{fmtDate(p.jugendflamme1)}</span>
