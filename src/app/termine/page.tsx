@@ -130,7 +130,7 @@ export default function TerminePage() {
       ) : (
         <>
           {/* Desktop: Matrix oder Liste */}
-          <div className="hidden lg:flex" style={{ flex: 1, overflow: "auto", padding: "8px 18px 0", alignItems: "flex-start" }}>
+          <div className="hidden lg:flex" style={{ flex: 1, overflow: "auto", padding: "0 18px 0", alignItems: "flex-start" }}>
             {ansicht === "matrix" ? (
               <MatrixView aktive={aktive} termine={termine} cellMap={cellMap} zielPersonen={zielPersonen} onCycle={cycle} editMode={editMode} />
             ) : (

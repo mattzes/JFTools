@@ -83,7 +83,7 @@ export default function TrainingPage() {
       ) : (
         <div style={{ flex: 1, overflowY: "auto" }}>
           {/* Desktop-Tabelle */}
-          <div className="hidden lg:block" style={{ padding: "6px 18px 0" }}>
+          <div className="hidden lg:block" style={{ padding: "0 18px 0" }}>
             <table className="table">
               <thead>
                 <tr>

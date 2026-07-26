@@ -135,7 +135,7 @@ export default function PersonenPage() {
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* Liste */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "4px 8px 16px 16px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 16px 16px" }}>
           {liste.length === 0 ? (
             <Empty icon="ph-users-three" text="Keine Personen" hint="Lege die erste Person über den Button oben an." />
           ) : (
