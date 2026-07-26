@@ -202,12 +202,6 @@ select.input { appearance: auto; }
 .dialog-title { font-family: var(--font-heading); font-weight: 500; font-size: 20px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
-/* Avatar-Initialen */
-.avatar {
-  border-radius: 50%; display: inline-grid; place-items: center; flex: none;
-  font-weight: 600; background: var(--color-accent-800); color: var(--color-accent-100);
-}
-
 /* ── datepicker (eigenes Design, kein natives Control) ── */
 .dp-trigger { display: flex; align-items: center; gap: 8px; text-align: left; }
 .dp-trigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

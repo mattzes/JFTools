@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useMemo, useState, type CSSProperties } from "react";
 import { api, useApi, Person, Termin, Verfuegbarkeit, personName } from "@/lib/api";
 import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, fmtDate, fmtDateShort } from "@/components/ui";
 import { PLANUNGSMODI, ZIELGRUPPEN, Planungsmodus, Zielgruppe } from "@/lib/domain/constants";
@@ -11,6 +10,15 @@ const STATUS_CELL = {
   nein: { icon: "ph-x", c: "var(--danger)", bg: "rgba(232,110,110,.14)" },
   offen: { icon: "ph-minus", c: "var(--color-neutral-600)", bg: "transparent" },
 } as const;
+
+// Abhak-Buttons im Termin-Dialog (Ja / Nein / offen)
+const SEG_BTN = { display: "inline-grid", placeItems: "center", width: 34, height: 30, borderRadius: 8, fontSize: 13, border: 0, cursor: "pointer" } as const;
+const SEG_OFF = { background: "var(--color-neutral-800)", color: "var(--color-neutral-600)" } as const;
+const SEG_ON: Record<Verfuegbarkeit["status"], CSSProperties> = {
+  ja: { background: "var(--color-accent-900)", color: "var(--color-accent-200)" },
+  nein: { background: "rgba(232,110,110,.2)", color: "var(--danger)" },
+  offen: { background: "var(--color-neutral-700)", color: "var(--color-neutral-100)" },
+};
 
 const MODUS_LABEL: Record<Planungsmodus, string> = {
   keine: "keine — nur Verfügbarkeit",
@@ -130,14 +138,18 @@ export default function TerminePage() {
             )}
           </div>
 
-          {/* Mobile: Terminliste (führt zur Abhak-Ansicht) */}
+          {/* Mobile: Terminliste (Tippen öffnet den Bearbeiten-Dialog) */}
           <div className="flex flex-col gap-2 lg:hidden" style={{ flex: 1, overflowY: "auto", padding: "6px 16px 16px" }}>
             {termine.map((t) => {
               const ziel = zielPersonen(t);
               const zusagen = verf.filter((v) => v.terminId === t.id && v.status === "ja" && ziel.some((p) => p.id === v.personId)).length;
               const d = fmtDateShort(t.datumVon);
               return (
-                <Link key={t.id} href={`/termine/${t.id}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", background: "var(--color-surface)", borderRadius: 11, textDecoration: "none", color: "inherit" }}>
+                <button
+                  key={t.id}
+                  onClick={() => { setFehler(null); setForm({ id: t.id, titel: t.titel, datumVon: t.datumVon, datumBis: t.datumBis ?? "", planungsmodus: t.planungsmodus, zielgruppe: t.zielgruppe, ort: t.ort ?? "" }); }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", background: "var(--color-surface)", borderRadius: 11, border: 0, color: "inherit", font: "inherit", textAlign: "left", cursor: "pointer" }}
+                >
                   <div style={{ width: 38, flex: "none", textAlign: "center", lineHeight: 1.05 }}>
                     <div style={{ font: "600 17px/1 var(--font-heading)" }}>{d.tag}</div>
                     <div style={{ fontSize: 10, color: "var(--color-neutral-500)", textTransform: "uppercase" }}>{d.mon}</div>
@@ -147,8 +159,8 @@ export default function TerminePage() {
                     <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 1 }}>{zusagen}/{ziel.length} Zusagen</div>
                   </div>
                   <ModeTag modus={t.planungsmodus} short />
-                  <i className="ph ph-caret-right" style={{ color: "var(--color-neutral-600)" }} />
-                </Link>
+                  <i className="ph ph-pencil-simple" style={{ color: "var(--color-neutral-600)" }} />
+                </button>
               );
             })}
           </div>
@@ -193,6 +205,42 @@ export default function TerminePage() {
               <input className="input" value={form.ort} onChange={(e) => setForm({ ...form, ort: e.target.value })} />
             </div>
           </div>
+          {form.id && (() => {
+            const tid = form.id;
+            const ziel = zielPersonen({ zielgruppe: form.zielgruppe } as Termin);
+            return (
+              <div className="field">
+                <label>Anwesenheiten <span style={{ color: "var(--color-neutral-500)", fontWeight: 400 }}>· Ja / Nein / offen</span></label>
+                {ziel.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>Keine Personen in der Zielgruppe.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto", paddingRight: 2 }}>
+                    {ziel.map((p) => {
+                      const s = cellMap.get(`${p.id}:${tid}`) ?? "offen";
+                      return (
+                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{personName(p)}</span>
+                          <div style={{ display: "flex", gap: 4, flex: "none" }}>
+                            {(["ja", "nein", "offen"] as const).map((st) => (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => setCell(p.id, tid, st)}
+                                aria-label={st}
+                                style={{ ...SEG_BTN, ...(s === st ? SEG_ON[st] : SEG_OFF) }}
+                              >
+                                <i className={`ph-bold ${STATUS_CELL[st].icon}`} />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           {fehler && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{fehler}</div>}
           <div className="dialog-actions">
             {form.id && (
@@ -339,9 +387,7 @@ function ListeView({
           return (
             <tr key={t.id}>
               <td style={{ whiteSpace: "nowrap" }}>{fmtDate(t.datumVon)}{t.datumBis ? `–${fmtDate(t.datumBis).slice(0, 5)}` : ""}</td>
-              <td style={{ fontWeight: 500 }}>
-                <Link href={`/termine/${t.id}`} style={{ color: "inherit", textDecoration: "none" }}>{t.titel}</Link>
-              </td>
+              <td style={{ fontWeight: 500 }}>{t.titel}</td>
               <td><ModeTag modus={t.planungsmodus} /></td>
               <td style={{ fontSize: 12.5, color: "var(--color-neutral-400)" }}>{ZIEL_LABEL[t.zielgruppe]}</td>
               <td style={{ textAlign: "right", fontWeight: 600 }}>{ja}<span style={{ color: "var(--color-neutral-600)" }}>/{ziel.length}</span></td>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, Dokumententyp, Rueckmeldung, personName } from "@/lib/api";
-import { Avatar, Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
+import { Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
 
 const COLORS = ["var(--danger)", "var(--warn)", "var(--color-accent-400)", "var(--color-accent-2)"];
 
@@ -87,10 +87,7 @@ export default function RueckmeldungenPage() {
                 {jugend.map((p) => (
                   <tr key={p.id}>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                        <Avatar name={personName(p)} size={24} />
-                        <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
-                      </div>
+                      <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
                     </td>
                     {doks.map((d) => {
                       const ok = map.get(`${p.id}:${d.id}`)?.erhalten ?? false;

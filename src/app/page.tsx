@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { api, useApi, Person, Termin, Verfuegbarkeit, Rueckmeldung, Dokumententyp } from "@/lib/api";
-import { Avatar, ModeTag, PageHeader, Spinner, fmtDateShort } from "@/components/ui";
+import { ModeTag, PageHeader, Spinner, fmtDateShort } from "@/components/ui";
 
 export default function UebersichtPage() {
   const { data: personen } = useApi<Person[]>("/personen");
@@ -88,7 +88,7 @@ export default function UebersichtPage() {
               const pct = ziel.length ? Math.round((zusagen / ziel.length) * 100) : 0;
               const d = fmtDateShort(t.datumVon);
               return (
-                <Link key={t.id} href={`/termine/${t.id}`} className="mrow" style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={t.id} href="/termine" className="mrow" style={{ textDecoration: "none", color: "inherit" }}>
                   <div style={{ width: 38, flex: "none", textAlign: "center", lineHeight: 1.05 }}>
                     <div style={{ font: "600 17px/1 var(--font-heading)" }}>{d.tag}</div>
                     <div style={{ fontSize: 10, color: "var(--color-neutral-500)", textTransform: "uppercase" }}>{d.mon}</div>
@@ -141,7 +141,6 @@ export default function UebersichtPage() {
         {/* Erststart: noch keine Personen da → anlegen oder Demo-Daten laden */}
         {aktive.length === 0 && (
           <div className="panel" style={{ marginTop: 16, padding: 20, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-            <Avatar name="J F" size={38} />
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Noch keine Personen angelegt</div>
               <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Lege Jugendliche und Betreuer an — oder starte mit Beispieldaten aus der Spezifikation.</div>

@@ -4,21 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Planungsmodus } from "@/lib/domain/constants";
 
-export function Avatar({ name, size = 26 }: { name: string; size?: number }) {
-  const init = name
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-  return (
-    <span className="avatar" style={{ width: size, height: size, fontSize: size * 0.38 }}>
-      {init}
-    </span>
-  );
-}
-
 // Farbwelt der Planungsmodi (aus den Mockups)
 export const MODE_STYLE: Record<Planungsmodus, { bg: string; fg: string; icon: string; label: string }> = {
   keine: { bg: "var(--color-neutral-800)", fg: "var(--color-neutral-300)", icon: "ph-circle", label: "keine" },

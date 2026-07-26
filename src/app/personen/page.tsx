@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, personName } from "@/lib/api";
-import { Avatar, DatePicker, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
+import { DatePicker, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
 import { alter, alterInDiesemJahr, leistungsspangeVorschlag, jugendflamme1Vorschlag, jugendflamme2Vorschlag, geburtsdatumPlausibel } from "@/lib/domain/alter";
 
 type FormState = {
@@ -160,10 +160,7 @@ export default function PersonenPage() {
                     return (
                     <tr key={p.id} onClick={() => setSelId(p.id)} style={{ cursor: "pointer", opacity: p.aktiv ? 1 : 0.45 }}>
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                          <Avatar name={personName(p)} />
-                          <div style={{ fontSize: 13, fontWeight: 500 }}>{personName(p)}</div>
-                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{personName(p)}</div>
                       </td>
                       <td>
                         <span className="ph-tag" style={p.rolle === "betreuer" ? { background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" } : { background: "var(--color-neutral-800)", color: "var(--color-neutral-200)" }}>
@@ -221,7 +218,6 @@ export default function PersonenPage() {
                       opacity: p.aktiv ? 1 : 0.45,
                     }}
                   >
-                    <Avatar name={personName(p)} size={36} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 500 }}>{personName(p)}</div>
                       <div style={{ fontSize: 11, color: "var(--color-neutral-500)" }}>

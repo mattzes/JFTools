@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, Disziplin, Messung, personName } from "@/lib/api";
-import { Avatar, DatePicker, Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
+import { DatePicker, Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
 
 export default function TrainingPage() {
   const { data: personen } = useApi<Person[]>("/personen");
@@ -102,10 +102,7 @@ export default function TrainingPage() {
                     <tr key={r.personId}>
                       <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{i + 1}</td>
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                          <Avatar name={p ? personName(p) : "?"} size={24} />
-                          <span style={{ fontSize: 12.5 }}>{p ? personName(p) : "?"}</span>
-                        </div>
+                        <span style={{ fontSize: 12.5 }}>{p ? personName(p) : "?"}</span>
                       </td>
                       <td style={{ textAlign: "center" }}><b style={{ color: "var(--color-accent-200)", fontSize: 13 }}>{r.best}s</b></td>
                       <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.last}s</td>
@@ -126,7 +123,6 @@ export default function TrainingPage() {
                 <div key={r.personId} className="panel" style={{ padding: "12px 14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                     <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: "var(--color-neutral-500)" }}>{i + 1}</span>
-                    <Avatar name={p ? personName(p) : "?"} size={28} />
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{p ? personName(p) : "?"}</span>
                     <Sparkline werte={r.werte} w={70} h={22} />
                   </div>

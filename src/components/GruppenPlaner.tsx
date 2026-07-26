@@ -14,7 +14,7 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { api, Person, Planung, HindernisFaehigkeit, Gruppe, Gruppenmitglied, KnotenZuordnung, personName } from "@/lib/api";
-import { Avatar, ModeTag, PageHeader, Dialog } from "@/components/ui";
+import { ModeTag, PageHeader, Dialog } from "@/components/ui";
 import { A_TEIL_POSITIONEN, A_TEIL_LABELS, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN, KnotenPosition, Knoten } from "@/lib/domain/constants";
 import { alterInDiesemJahr } from "@/lib/domain/alter";
 import { gruppenAlter, sollZeitLabel, gruppenWarnungen } from "@/lib/domain/planung";
@@ -211,7 +211,6 @@ export function GruppenPlaner({
         <DragOverlay>
           {activeP && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 9, background: "var(--color-surface)", boxShadow: "var(--shadow-md)" }}>
-              <Avatar name={personName(activeP)} />
               <span style={{ fontSize: 12, fontWeight: 500 }}>{personName(activeP)}</span>
             </div>
           )}
@@ -282,7 +281,6 @@ function StarterChip({ person, hind, doppel }: { person: Person; hind?: Hinderni
         cursor: "grab", opacity: isDragging ? 0.4 : 1, touchAction: "none",
       }}
     >
-      <Avatar name={personName(person)} />
       <div style={{ flex: 1, minWidth: 0, lineHeight: 1.15 }}>
         <div style={{ fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(person)}</div>
         <div style={{ fontSize: 9.5, color: "var(--color-neutral-500)" }}>Jg.-Alter {person.geburtsdatum ? alterInDiesemJahr(person.geburtsdatum) : "?"}</div>
@@ -474,7 +472,6 @@ function MemberChip({ m, p, from, doppel, onRemove }: { m: Gruppenmitglied; p: P
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
       <span ref={setNodeRef} {...listeners} {...attributes} style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "grab", opacity: isDragging ? 0.4 : 1, touchAction: "none", minWidth: 0 }}>
-        <Avatar name={personName(p)} size={22} />
         <span style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(p)}</span>
         {doppel && <span style={{ fontSize: 8.5, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 4, padding: "0px 4px" }}>2×</span>}
       </span>
