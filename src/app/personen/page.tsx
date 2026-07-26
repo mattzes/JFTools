@@ -174,15 +174,15 @@ export default function PersonenPage() {
                           >
                             {p.rolle === "betreuer" ? "B" : "J"}
                           </span>
-                          <span style={{ fontSize: 13, fontWeight: 500 }}>{personName(p)}</span>
+                          <span style={{ fontSize: 15, fontWeight: 500 }}>{personName(p)}</span>
                         </span>
                       </td>
-                      <td style={{ fontSize: 12.5 }}>{p.geburtsdatum ? fmtDate(p.geburtsdatum) : <Dash />}</td>
-                      <td style={{ fontSize: 12.5 }}>{p.eintrittsdatum ? fmtDate(p.eintrittsdatum) : <Dash />}</td>
-                      <td style={{ fontSize: 12.5 }}>{p.ausweisnr ? p.ausweisnr : <Dash />}</td>
+                      <td style={{ fontSize: 14 }}>{p.geburtsdatum ? fmtDate(p.geburtsdatum) : <Dash />}</td>
+                      <td style={{ fontSize: 14 }}>{p.eintrittsdatum ? fmtDate(p.eintrittsdatum) : <Dash />}</td>
+                      <td style={{ fontSize: 14 }}>{p.ausweisnr ? p.ausweisnr : <Dash />}</td>
                       <td style={{ textAlign: "center" }}>{p.geburtsdatum ? <span style={{ fontWeight: 500 }}>{alterInDiesemJahr(p.geburtsdatum)}</span> : <Dash />}</td>
                       <td style={{ textAlign: "center" }}>{p.geburtsdatum ? <span style={{ fontWeight: 500 }}>{alter(p.geburtsdatum)}</span> : <Dash />}</td>
-                      <td style={{ fontSize: 12.5 }}>
+                      <td style={{ fontSize: 14 }}>
                         {p.jugendflamme1 ? (
                           <span style={{ color: "var(--color-accent-300)" }}><i className="ph ph-check" style={{ marginRight: 4 }} />{fmtDate(p.jugendflamme1)}</span>
                         ) : p.eintrittsdatum ? (
@@ -191,7 +191,7 @@ export default function PersonenPage() {
                           <Dash />
                         )}
                       </td>
-                      <td style={{ fontSize: 12.5 }}>
+                      <td style={{ fontSize: 14 }}>
                         {p.jugendflamme2 ? (
                           <span style={{ color: "var(--color-accent-300)" }}><i className="ph ph-check" style={{ marginRight: 4 }} />{fmtDate(p.jugendflamme2)}</span>
                         ) : jfl2v != null ? (
@@ -200,7 +200,7 @@ export default function PersonenPage() {
                           <Dash />
                         )}
                       </td>
-                      <td style={{ fontSize: 12.5 }}>
+                      <td style={{ fontSize: 14 }}>
                         {p.leistungsspangeDatum ? (
                           <span style={{ color: "var(--color-accent-300)" }}>
                             <i className="ph ph-medal" style={{ marginRight: 4 }} />{fmtDate(p.leistungsspangeDatum)}

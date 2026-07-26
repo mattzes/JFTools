@@ -18,7 +18,7 @@ function Dash() {
   return <span style={{ color: "var(--color-neutral-600)" }}>—</span>;
 }
 
-const doneStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "var(--color-accent-300)", whiteSpace: "nowrap" };
+const doneStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 14, color: "var(--color-accent-300)", whiteSpace: "nowrap" };
 
 export default function AbzeichenPage() {
   const { data: personen, reload } = useApi<Person[]>("/personen");
@@ -125,7 +125,7 @@ export default function AbzeichenPage() {
               <tbody>
                 {jugend.map((p) => (
                   <tr key={p.id}>
-                    <td><span style={{ fontSize: 12.5, fontWeight: 500 }}>{personName(p)}</span></td>
+                    <td><span style={{ fontSize: 15, fontWeight: 500 }}>{personName(p)}</span></td>
                     {BADGES.map((b) => (
                       <td key={b.id} style={{ textAlign: "center" }}>
                         <AbzeichenCell p={p} badge={b} editable={view === "planung"} jahr={jahr} onPlan={setPlan} onErledigt={openErledigt} />
@@ -222,7 +222,7 @@ function AbzeichenCell({
   // Übersicht (read-only): geplant oder Vorschlag
   if (!editable) {
     if (plan != null) return <span className="ph-tag" style={{ background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" }}>{plan}</span>;
-    if (vorschlag != null) return <span style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Vorschlag {vorschlag}</span>;
+    if (vorschlag != null) return <span style={{ fontSize: 13.5, color: "var(--color-neutral-500)" }}>Vorschlag {vorschlag}</span>;
     return <Dash />;
   }
 
@@ -234,7 +234,7 @@ function AbzeichenCell({
         className="input"
         value={plan != null ? String(plan) : ""}
         onChange={(e) => onPlan(p, badge, e.target.value === "" ? null : Number(e.target.value))}
-        style={{ width: "auto", minHeight: 0, height: 30, padding: "2px 6px", fontSize: 12, color: plan != null ? "var(--color-accent-2-100)" : "var(--color-neutral-500)" }}
+        style={{ width: "auto", minHeight: 0, height: 34, padding: "2px 8px", fontSize: 13.5, color: plan != null ? "var(--color-accent-2-100)" : "var(--color-neutral-500)" }}
       >
         <option value="">{vorschlag != null ? `Vorschlag ${vorschlag}` : "—"}</option>
         {years.map((y) => (
@@ -244,9 +244,9 @@ function AbzeichenCell({
       <button
         onClick={() => onErledigt(p, badge)}
         title="als erledigt eintragen"
-        style={{ display: "inline-grid", placeItems: "center", width: 28, height: 28, borderRadius: 7, background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-400)", boxShadow: "inset 0 0 0 1px var(--color-neutral-700)" }}
+        style={{ display: "inline-grid", placeItems: "center", width: 32, height: 32, borderRadius: 8, background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-400)", boxShadow: "inset 0 0 0 1px var(--color-neutral-700)" }}
       >
-        <i className="ph ph-check" style={{ fontSize: 14 }} />
+        <i className="ph ph-check" style={{ fontSize: 16 }} />
       </button>
     </span>
   );

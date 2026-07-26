@@ -102,12 +102,12 @@ export default function TrainingPage() {
                     <tr key={r.personId}>
                       <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{i + 1}</td>
                       <td>
-                        <span style={{ fontSize: 12.5 }}>{p ? personName(p) : "?"}</span>
+                        <span style={{ fontSize: 14 }}>{p ? personName(p) : "?"}</span>
                       </td>
-                      <td style={{ textAlign: "center" }}><b style={{ color: "var(--color-accent-200)", fontSize: 13 }}>{r.best}s</b></td>
+                      <td style={{ textAlign: "center" }}><b style={{ color: "var(--color-accent-200)", fontSize: 15 }}>{r.best}s</b></td>
                       <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.last}s</td>
                       <td><Sparkline werte={r.werte} /></td>
-                      <td style={{ fontSize: 11.5, color: "var(--color-neutral-400)", maxWidth: 220 }}>{r.note}</td>
+                      <td style={{ fontSize: 13, color: "var(--color-neutral-400)", maxWidth: 220 }}>{r.note}</td>
                     </tr>
                   );
                 })}

@@ -331,7 +331,7 @@ function MatrixView({
                 >
                   {p.rolle === "betreuer" ? "B" : "J"}
                 </span>
-                <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
+                <span style={{ fontSize: 14 }}>{personName(p)}</span>
               </span>
             </td>
             {termine.map((t) => {
@@ -346,15 +346,15 @@ function MatrixView({
                       <button
                         onClick={() => onCycle(p.id, t.id)}
                         title="klicken zum Wechseln (Ja → Nein → offen)"
-                        style={{ display: "inline-grid", placeItems: "center", width: 26, height: 26, borderRadius: 7, background: cell.bg, color: cell.c, cursor: "pointer", border: 0, boxShadow: "inset 0 0 0 1px var(--color-neutral-600)" }}
+                        style={{ display: "inline-grid", placeItems: "center", width: 30, height: 30, borderRadius: 8, background: cell.bg, color: cell.c, cursor: "pointer", border: 0, boxShadow: "inset 0 0 0 1px var(--color-neutral-600)" }}
                       >
-                        <i className={`ph-bold ${cell.icon}`} style={{ fontSize: 12 }} />
+                        <i className={`ph-bold ${cell.icon}`} style={{ fontSize: 14 }} />
                       </button>
                     ) : (
                       <span
-                        style={{ display: "inline-grid", placeItems: "center", width: 26, height: 26, borderRadius: 7, background: cell.bg, color: cell.c }}
+                        style={{ display: "inline-grid", placeItems: "center", width: 30, height: 30, borderRadius: 8, background: cell.bg, color: cell.c }}
                       >
-                        <i className={`ph-bold ${cell.icon}`} style={{ fontSize: 12 }} />
+                        <i className={`ph-bold ${cell.icon}`} style={{ fontSize: 14 }} />
                       </span>
                     )
                   ) : (
@@ -402,7 +402,7 @@ function ListeView({
               <td style={{ whiteSpace: "nowrap" }}>{fmtDate(t.datumVon)}{t.datumBis ? `–${fmtDate(t.datumBis).slice(0, 5)}` : ""}</td>
               <td style={{ fontWeight: 500 }}>{t.titel}</td>
               <td><ModeTag modus={t.planungsmodus} /></td>
-              <td style={{ fontSize: 12.5, color: "var(--color-neutral-400)" }}>{ZIEL_LABEL[t.zielgruppe]}</td>
+              <td style={{ fontSize: 14, color: "var(--color-neutral-400)" }}>{ZIEL_LABEL[t.zielgruppe]}</td>
               <td style={{ textAlign: "right", fontWeight: 600 }}>{ja}<span style={{ color: "var(--color-neutral-600)" }}>/{ziel.length}</span></td>
             </tr>
           );

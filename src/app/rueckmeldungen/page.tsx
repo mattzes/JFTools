@@ -139,7 +139,7 @@ export default function RueckmeldungenPage() {
                     <td>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                         <RolleBadge rolle={p.rolle} />
-                        <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
+                        <span style={{ fontSize: 14 }}>{personName(p)}</span>
                       </span>
                     </td>
                     {doks.map((d) => {
@@ -147,19 +147,19 @@ export default function RueckmeldungenPage() {
                         return <td key={d.id} style={{ textAlign: "center", color: "var(--color-neutral-800)" }}>·</td>;
                       }
                       const ok = map.get(`${p.id}:${d.id}`)?.erhalten ?? false;
-                      const icon = <i className={`ph ${ok ? "ph-check-circle" : "ph-clock"}`} style={{ color: ok ? "var(--color-accent-300)" : "var(--warn)", fontSize: 18 }} />;
+                      const icon = <i className={`ph ${ok ? "ph-check-circle" : "ph-clock"}`} style={{ color: ok ? "var(--color-accent-300)" : "var(--warn)", fontSize: 21 }} />;
                       return (
                         <td key={d.id} style={{ textAlign: "center" }}>
                           {editMode ? (
                             <button
                               onClick={() => toggle(p.id, d.id)}
                               title={ok ? "erhalten — klicken zum Wechseln" : "offen — klicken zum Wechseln"}
-                              style={{ display: "inline-grid", placeItems: "center", width: 30, height: 30, borderRadius: 8, background: "transparent", border: 0, cursor: "pointer", boxShadow: "inset 0 0 0 1px var(--color-neutral-600)" }}
+                              style={{ display: "inline-grid", placeItems: "center", width: 36, height: 36, borderRadius: 9, background: "transparent", border: 0, cursor: "pointer", boxShadow: "inset 0 0 0 1px var(--color-neutral-600)" }}
                             >
                               {icon}
                             </button>
                           ) : (
-                            <span style={{ display: "inline-grid", placeItems: "center", width: 30, height: 30 }} title={ok ? "erhalten" : "offen"}>
+                            <span style={{ display: "inline-grid", placeItems: "center", width: 36, height: 36 }} title={ok ? "erhalten" : "offen"}>
                               {icon}
                             </span>
                           )}
