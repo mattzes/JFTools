@@ -318,7 +318,21 @@ function MatrixView({
         {aktive.map((p) => (
           <tr key={p.id}>
             <td>
-              <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                <span
+                  title={p.rolle === "betreuer" ? "Betreuer" : "Jugendlich"}
+                  style={{
+                    width: 18, height: 18, flex: "none", borderRadius: 5, display: "inline-grid", placeItems: "center",
+                    fontSize: 10, fontWeight: 700,
+                    ...(p.rolle === "betreuer"
+                      ? { background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" }
+                      : { background: "var(--color-neutral-800)", color: "var(--color-neutral-200)" }),
+                  }}
+                >
+                  {p.rolle === "betreuer" ? "B" : "J"}
+                </span>
+                <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
+              </span>
             </td>
             {termine.map((t) => {
               const ziel = zielPersonen(t);

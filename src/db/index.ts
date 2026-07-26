@@ -45,6 +45,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS verf_person_termin ON verfuegbarkeiten(person_
 CREATE TABLE IF NOT EXISTS dokumententypen (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
+  zielgruppe TEXT NOT NULL DEFAULT 'alle',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -131,6 +132,11 @@ const TERMINE_SEED: Array<[string, string, string | null, string, string]> = [
 // Leichte, idempotente Spalten-Migrationen für bereits bestehende Datenbanken
 // (CREATE TABLE IF NOT EXISTS legt neue Spalten sonst nicht nach).
 function migrate(sqlite: Database.Database) {
+  const dokCols = sqlite.prepare("PRAGMA table_info(dokumententypen)").all() as { name: string }[];
+  if (!dokCols.some((c) => c.name === "zielgruppe")) {
+    sqlite.exec("ALTER TABLE dokumententypen ADD COLUMN zielgruppe TEXT NOT NULL DEFAULT 'alle'");
+  }
+
   const cols = sqlite.prepare("PRAGMA table_info(personen)").all() as { name: string }[];
   const has = (name: string) => cols.some((c) => c.name === name);
   if (!has("leistungsspange_datum")) {

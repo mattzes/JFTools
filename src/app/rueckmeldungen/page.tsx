@@ -3,14 +3,42 @@
 import { useMemo, useState } from "react";
 import { api, useApi, Person, Dokumententyp, Rueckmeldung, personName } from "@/lib/api";
 import { Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
+import { ZIELGRUPPEN, Zielgruppe } from "@/lib/domain/constants";
 
 const COLORS = ["var(--danger)", "var(--warn)", "var(--color-accent-400)", "var(--color-accent-2)"];
+
+const ZIEL_LABEL: Record<Zielgruppe, string> = {
+  alle: "alle",
+  nur_betreuer: "nur Betreuer",
+  nur_jugendliche: "nur Jugendliche",
+};
+
+// Ziel-Personen eines Dokumenttyps (aktive gefiltert nach Zielgruppe)
+function inZielgruppe(p: Person, zielgruppe: string) {
+  return zielgruppe === "nur_betreuer" ? p.rolle === "betreuer" : zielgruppe === "nur_jugendliche" ? p.rolle === "jugendlich" : true;
+}
+
+function RolleBadge({ rolle }: { rolle: Person["rolle"] }) {
+  const betreuer = rolle === "betreuer";
+  return (
+    <span
+      title={betreuer ? "Betreuer" : "Jugendlich"}
+      style={{
+        width: 18, height: 18, flex: "none", borderRadius: 5, display: "inline-grid", placeItems: "center",
+        fontSize: 10, fontWeight: 700,
+        ...(betreuer ? { background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" } : { background: "var(--color-neutral-800)", color: "var(--color-neutral-200)" }),
+      }}
+    >
+      {betreuer ? "B" : "J"}
+    </span>
+  );
+}
 
 export default function RueckmeldungenPage() {
   const { data: personen } = useApi<Person[]>("/personen");
   const { data: doks, reload: reloadDoks } = useApi<Dokumententyp[]>("/dokumententypen");
   const { data: rueck, reload } = useApi<Rueckmeldung[]>("/rueckmeldungen");
-  const [neuerTyp, setNeuerTyp] = useState<string | null>(null);
+  const [neuerTyp, setNeuerTyp] = useState<{ name: string; zielgruppe: Zielgruppe } | null>(null);
 
   const map = useMemo(() => {
     const m = new Map<string, Rueckmeldung>();
@@ -20,7 +48,7 @@ export default function RueckmeldungenPage() {
 
   if (!personen || !doks || !rueck) return <Spinner />;
 
-  const jugend = personen.filter((p) => p.aktiv && p.rolle === "jugendlich");
+  const aktive = personen.filter((p) => p.aktiv);
 
   async function toggle(personId: number, dokumententypId: number) {
     const cur = map.get(`${personId}:${dokumententypId}`);
@@ -33,36 +61,42 @@ export default function RueckmeldungenPage() {
   }
 
   async function addTyp() {
-    if (!neuerTyp?.trim()) return;
-    await api("/dokumententypen", { method: "POST", body: JSON.stringify({ name: neuerTyp.trim() }) });
+    if (!neuerTyp?.name.trim()) return;
+    await api("/dokumententypen", { method: "POST", body: JSON.stringify({ name: neuerTyp.name.trim(), zielgruppe: neuerTyp.zielgruppe }) });
     setNeuerTyp(null);
     reloadDoks();
   }
 
   const stats = doks.map((d, i) => {
-    const da = jugend.filter((p) => map.get(`${p.id}:${d.id}`)?.erhalten).length;
-    const fehlt = jugend.filter((p) => !map.get(`${p.id}:${d.id}`)?.erhalten).map((p) => p.vorname + " " + p.nachname[0] + ".");
-    return { ...d, da, ges: jugend.length, pct: jugend.length ? Math.round((da / jugend.length) * 100) : 0, color: COLORS[i % COLORS.length], fehlt };
+    const ziel = aktive.filter((p) => inZielgruppe(p, d.zielgruppe));
+    const da = ziel.filter((p) => map.get(`${p.id}:${d.id}`)?.erhalten).length;
+    const fehlt = ziel.filter((p) => !map.get(`${p.id}:${d.id}`)?.erhalten).map((p) => p.vorname + " " + p.nachname[0] + ".");
+    return { ...d, da, ges: ziel.length, pct: ziel.length ? Math.round((da / ziel.length) * 100) : 0, color: COLORS[i % COLORS.length], fehlt };
   });
 
   return (
     <>
       <PageHeader title="Rückmeldungen" sub="Zettel & Einverständnis — wem fehlt noch was?">
-        <button className="btn btn-secondary" onClick={() => setNeuerTyp("")}>
+        <button className="btn btn-secondary" onClick={() => setNeuerTyp({ name: "", zielgruppe: "alle" })}>
           <i className="ph ph-plus" />
           Dokumenttyp
         </button>
       </PageHeader>
 
-      {jugend.length === 0 ? (
-        <Empty icon="ph-clipboard-text" text="Keine Jugendlichen" hint="Lege zuerst Personen an." />
+      {aktive.length === 0 ? (
+        <Empty icon="ph-clipboard-text" text="Keine Personen" hint="Lege zuerst Personen an." />
       ) : (
         <div style={{ flex: 1, overflowY: "auto" }}>
           {/* Übersichtskacheln */}
           <div className="flex gap-3 overflow-x-auto" style={{ padding: "16px 18px 8px" }}>
             {stats.map((d) => (
               <div key={d.id} className="kpi" style={{ minWidth: 180, gap: 9 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 500 }}>{d.name}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 500 }}>{d.name}</span>
+                  {d.zielgruppe !== "alle" && (
+                    <span className="ph-tag" style={{ background: "var(--color-neutral-800)", color: "var(--color-neutral-300)", fontSize: 9.5 }}>{ZIEL_LABEL[d.zielgruppe]}</span>
+                  )}
+                </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
                   <span className="kpi-n" style={{ fontSize: 22 }}>{d.da}</span>
                   <span style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>/ {d.ges} erhalten</span>
@@ -77,19 +111,30 @@ export default function RueckmeldungenPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Person</th>
+                  <th>Name</th>
                   {doks.map((d) => (
-                    <th key={d.id} style={{ textAlign: "center" }}>{d.name}</th>
+                    <th key={d.id} style={{ textAlign: "center" }}>
+                      <div>{d.name}</div>
+                      {d.zielgruppe !== "alle" && (
+                        <div style={{ fontSize: 10, fontWeight: 400, color: "var(--color-neutral-500)", textTransform: "none", letterSpacing: 0 }}>{ZIEL_LABEL[d.zielgruppe]}</div>
+                      )}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {jugend.map((p) => (
+                {aktive.map((p) => (
                   <tr key={p.id}>
                     <td>
-                      <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                        <RolleBadge rolle={p.rolle} />
+                        <span style={{ fontSize: 12.5 }}>{personName(p)}</span>
+                      </span>
                     </td>
                     {doks.map((d) => {
+                      if (!inZielgruppe(p, d.zielgruppe)) {
+                        return <td key={d.id} style={{ textAlign: "center", color: "var(--color-neutral-800)" }}>·</td>;
+                      }
                       const ok = map.get(`${p.id}:${d.id}`)?.erhalten ?? false;
                       return (
                         <td key={d.id} style={{ textAlign: "center" }}>
@@ -110,7 +155,12 @@ export default function RueckmeldungenPage() {
             {stats.map((d) => (
               <div key={d.id} className="panel" style={{ padding: "14px 16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 500 }}>{d.name}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 500 }}>{d.name}</span>
+                    {d.zielgruppe !== "alle" && (
+                      <span className="ph-tag" style={{ background: "var(--color-neutral-800)", color: "var(--color-neutral-300)", fontSize: 9.5 }}>{ZIEL_LABEL[d.zielgruppe]}</span>
+                    )}
+                  </span>
                   <span style={{ fontSize: 12, fontWeight: 600 }}>{d.da}/{d.ges}</span>
                 </div>
                 <div className="av-bar" style={{ height: 7, marginBottom: 10 }}>
@@ -129,11 +179,19 @@ export default function RueckmeldungenPage() {
         <Dialog title="Neuer Dokumenttyp" onClose={() => setNeuerTyp(null)}>
           <div className="field">
             <label>Name</label>
-            <input className="input" autoFocus placeholder="z. B. Gesundheitsbogen Zeltlager" value={neuerTyp} onChange={(e) => setNeuerTyp(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTyp()} />
+            <input className="input" autoFocus placeholder="z. B. Gesundheitsbogen Zeltlager" value={neuerTyp.name} onChange={(e) => setNeuerTyp({ ...neuerTyp, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addTyp()} />
+          </div>
+          <div className="field">
+            <label>Zielgruppe</label>
+            <select className="input" value={neuerTyp.zielgruppe} onChange={(e) => setNeuerTyp({ ...neuerTyp, zielgruppe: e.target.value as Zielgruppe })}>
+              {ZIELGRUPPEN.map((z) => (
+                <option key={z} value={z}>{ZIEL_LABEL[z]}</option>
+              ))}
+            </select>
           </div>
           <div className="dialog-actions">
             <button className="btn btn-secondary" onClick={() => setNeuerTyp(null)}>Abbrechen</button>
-            <button className="btn btn-primary" onClick={addTyp} disabled={!neuerTyp.trim()}>Anlegen</button>
+            <button className="btn btn-primary" onClick={addTyp} disabled={!neuerTyp.name.trim()}>Anlegen</button>
           </div>
         </Dialog>
       )}

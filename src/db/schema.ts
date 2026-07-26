@@ -66,6 +66,7 @@ export const verfuegbarkeiten = sqliteTable(
 export const dokumententypen = sqliteTable("dokumententypen", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
+  zielgruppe: text("zielgruppe").notNull().default("alle"),
   ...timestamps,
 });
 

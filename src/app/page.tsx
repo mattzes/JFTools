@@ -34,11 +34,12 @@ export default function UebersichtPage() {
     }
   }
 
-  // Fehlende Rückmeldungen (alle Dokumenttypen × Jugendliche)
+  // Offene Checkliste (alle Dokumenttypen × jeweilige Zielgruppe)
   let fehlendeRueck = 0;
   const fehltJe: { name: string; offen: number }[] = [];
   for (const d of doks) {
-    const offen = jugend.filter((p) => !rueck.some((r) => r.personId === p.id && r.dokumententypId === d.id && r.erhalten)).length;
+    const ziel = d.zielgruppe === "nur_betreuer" ? betreuer : d.zielgruppe === "nur_jugendliche" ? jugend : aktive;
+    const offen = ziel.filter((p) => !rueck.some((r) => r.personId === p.id && r.dokumententypId === d.id && r.erhalten)).length;
     fehlendeRueck += offen;
     if (offen > 0) fehltJe.push({ name: d.name, offen });
   }

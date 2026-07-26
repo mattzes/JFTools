@@ -67,7 +67,7 @@ export type Termin = {
 };
 
 export type Verfuegbarkeit = { id: number; personId: number; terminId: number; status: "ja" | "nein" | "offen" };
-export type Dokumententyp = { id: number; name: string };
+export type Dokumententyp = { id: number; name: string; zielgruppe: "alle" | "nur_betreuer" | "nur_jugendliche" };
 export type Rueckmeldung = {
   id: number;
   personId: number;

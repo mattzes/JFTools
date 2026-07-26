@@ -89,6 +89,7 @@ export const verfuegbarkeitSchema = z.object({
 
 export const dokumententypSchema = z.object({
   name: z.string().min(1, "Name fehlt"),
+  zielgruppe: z.enum(ZIELGRUPPEN).default("alle"),
 });
 
 export const rueckmeldungSchema = z.object({
