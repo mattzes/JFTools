@@ -29,6 +29,9 @@ const personBaseSchema = z.object({
   jugendflamme1: isoDate.nullish(),
   jugendflamme2: isoDate.nullish(),
   leistungsspangeDatum: isoDate.nullish(),
+  jugendflamme1PlanJahr: z.number().int().min(2000).max(2100).nullish(),
+  jugendflamme2PlanJahr: z.number().int().min(2000).max(2100).nullish(),
+  leistungsspangePlanJahr: z.number().int().min(2000).max(2100).nullish(),
   aktiv: z.boolean().default(true),
 });
 

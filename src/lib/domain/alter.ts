@@ -44,6 +44,19 @@ export function jugendflamme2Vorschlag(
   return abJetzt(basis);
 }
 
+// Vorschlagsjahr für ein Abzeichen einer Person (kapselt die Guards je Typ).
+// Strukturell typisiert, um keinen Import-Zyklus mit @/lib/api zu erzeugen.
+type AbzeichenPerson = {
+  geburtsdatum: string | null;
+  eintrittsdatum: string | null;
+  jugendflamme1: string | null;
+};
+export function abzeichenVorschlag(p: AbzeichenPerson, typ: "jfl1" | "jfl2" | "lsp"): number | null {
+  if (typ === "jfl1") return p.eintrittsdatum ? jugendflamme1Vorschlag(p.eintrittsdatum) : null;
+  if (typ === "jfl2") return jugendflamme2Vorschlag(p.geburtsdatum, p.jugendflamme1);
+  return p.geburtsdatum ? leistungsspangeVorschlag(p.geburtsdatum) : null;
+}
+
 export function sollZeit(alterssumme: number) {
   return SOLL_ZEIT_TABELLE.find((r) => alterssumme >= r.minSumme && alterssumme <= r.maxSumme) ?? null;
 }

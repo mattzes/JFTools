@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS personen (
   geburtsdatum TEXT, eintrittsdatum TEXT, geschlecht TEXT,
   sitzplaetze INTEGER,
   jugendflamme1 TEXT, jugendflamme2 TEXT, leistungsspange_datum TEXT,
+  jugendflamme1_plan_jahr INTEGER, jugendflamme2_plan_jahr INTEGER, leistungsspange_plan_jahr INTEGER,
   aktiv INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -139,6 +140,9 @@ function migrate(sqlite: Database.Database) {
 
   const cols = sqlite.prepare("PRAGMA table_info(personen)").all() as { name: string }[];
   const has = (name: string) => cols.some((c) => c.name === name);
+  for (const col of ["jugendflamme1_plan_jahr", "jugendflamme2_plan_jahr", "leistungsspange_plan_jahr"]) {
+    if (!has(col)) sqlite.exec(`ALTER TABLE personen ADD COLUMN ${col} INTEGER`);
+  }
   if (!has("leistungsspange_datum")) {
     sqlite.exec("ALTER TABLE personen ADD COLUMN leistungsspange_datum TEXT");
     // Altbestand: nur bereits erworbene (vergangene) Jahre als 15.05. übernehmen.

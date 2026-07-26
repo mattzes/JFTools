@@ -53,6 +53,9 @@ export type Person = {
   jugendflamme1: string | null;
   jugendflamme2: string | null;
   leistungsspangeDatum: string | null;
+  jugendflamme1PlanJahr: number | null;
+  jugendflamme2PlanJahr: number | null;
+  leistungsspangePlanJahr: number | null;
   aktiv: boolean;
 };
 

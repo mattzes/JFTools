@@ -28,6 +28,10 @@ export const personen = sqliteTable("personen", {
   jugendflamme1: text("jugendflamme1"), // Datum der Abnahme
   jugendflamme2: text("jugendflamme2"),
   leistungsspangeDatum: text("leistungsspange_datum"), // Datum der Abnahme; leer = noch offen (Vorschlag aus Geburtsjahr+16)
+  // Geplantes Zieljahr je Abzeichen (nur relevant solange offen; separat vom Abnahme-Datum)
+  jugendflamme1PlanJahr: integer("jugendflamme1_plan_jahr"),
+  jugendflamme2PlanJahr: integer("jugendflamme2_plan_jahr"),
+  leistungsspangePlanJahr: integer("leistungsspange_plan_jahr"),
   aktiv: integer("aktiv", { mode: "boolean" }).notNull().default(true),
   ...timestamps,
 });
