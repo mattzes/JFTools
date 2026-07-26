@@ -391,7 +391,6 @@ function ListeView({
           <th>Modus</th>
           <th>Zielgruppe</th>
           <th style={{ textAlign: "right" }}>Zusagen</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -399,15 +398,12 @@ function ListeView({
           const ziel = zielPersonen(t);
           const ja = verf.filter((v) => v.terminId === t.id && v.status === "ja" && ziel.some((p) => p.id === v.personId)).length;
           return (
-            <tr key={t.id}>
+            <tr key={t.id} onClick={() => onEdit(t)} style={{ cursor: "pointer" }} title="Termin bearbeiten">
               <td style={{ whiteSpace: "nowrap" }}>{fmtDate(t.datumVon)}{t.datumBis ? `–${fmtDate(t.datumBis).slice(0, 5)}` : ""}</td>
               <td style={{ fontWeight: 500 }}>{t.titel}</td>
               <td><ModeTag modus={t.planungsmodus} /></td>
               <td style={{ fontSize: 12.5, color: "var(--color-neutral-400)" }}>{ZIEL_LABEL[t.zielgruppe]}</td>
               <td style={{ textAlign: "right", fontWeight: 600 }}>{ja}<span style={{ color: "var(--color-neutral-600)" }}>/{ziel.length}</span></td>
-              <td style={{ textAlign: "right" }}>
-                <button className="btn btn-ghost" onClick={() => onEdit(t)}><i className="ph ph-pencil-simple" /></button>
-              </td>
             </tr>
           );
         })}
