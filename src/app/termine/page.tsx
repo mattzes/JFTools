@@ -22,9 +22,9 @@ const SEG_ON: Record<Verfuegbarkeit["status"], CSSProperties> = {
 
 const MODUS_LABEL: Record<Planungsmodus, string> = {
   keine: "keine — nur Verfügbarkeit",
-  nur_gruppen: "nur_gruppen — freie Einteilung",
-  a_teil: "a_teil — 9 Positionen + Knoten",
-  a_und_b_teil: "a_und_b_teil — A + B-Teil",
+  nur_gruppen: "Nur Gruppen — freie Einteilung",
+  a_teil: "A-Teil",
+  a_und_b_teil: "A und B-Teil",
 };
 
 const ZIEL_LABEL: Record<Zielgruppe, string> = {

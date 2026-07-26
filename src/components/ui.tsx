@@ -7,9 +7,9 @@ import { Planungsmodus } from "@/lib/domain/constants";
 // Farbwelt der Planungsmodi (aus den Mockups)
 export const MODE_STYLE: Record<Planungsmodus, { bg: string; fg: string; icon: string; label: string }> = {
   keine: { bg: "var(--color-neutral-800)", fg: "var(--color-neutral-300)", icon: "ph-circle", label: "keine" },
-  nur_gruppen: { bg: "var(--color-accent-2-800)", fg: "var(--color-accent-2-100)", icon: "ph-users-three", label: "nur_gruppen" },
-  a_teil: { bg: "var(--color-accent-800)", fg: "var(--color-accent-100)", icon: "ph-list-numbers", label: "a_teil" },
-  a_und_b_teil: { bg: "var(--color-accent)", fg: "#0d0e15", icon: "ph-flag-checkered", label: "a+b" },
+  nur_gruppen: { bg: "var(--color-accent-2-800)", fg: "var(--color-accent-2-100)", icon: "ph-users-three", label: "Nur Gruppen" },
+  a_teil: { bg: "var(--color-accent-800)", fg: "var(--color-accent-100)", icon: "ph-list-numbers", label: "A-Teil" },
+  a_und_b_teil: { bg: "var(--color-accent)", fg: "#0d0e15", icon: "ph-flag-checkered", label: "A und B-Teil" },
 };
 
 export function ModeTag({ modus, short }: { modus: Planungsmodus; short?: boolean }) {
@@ -17,7 +17,7 @@ export function ModeTag({ modus, short }: { modus: Planungsmodus; short?: boolea
   return (
     <span className="ph-tag" style={{ background: m.bg, color: m.fg }}>
       <i className={`${modus === "a_und_b_teil" ? "ph-bold" : "ph"} ${m.icon}`} />
-      {!short && (modus === "a_und_b_teil" ? "a_und_b_teil" : m.label)}
+      {!short && m.label}
     </span>
   );
 }
