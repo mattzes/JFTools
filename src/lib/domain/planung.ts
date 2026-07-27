@@ -54,9 +54,5 @@ export function gruppenWarnungen(
     if (rueckOffenByPerson.has(m.personId)) w.push(`${p.vorname} ${p.nachname}: Einverständniserklärung fehlt`);
   }
 
-  const { summe } = gruppenAlter(mitglieder, personById);
-  if (istABTeil && mitglieder.length > 0 && !startberechtigt(summe)) {
-    w.push(`Alterssumme ${summe} außerhalb 90–162 — Gruppe nicht startberechtigt`);
-  }
   return w;
 }

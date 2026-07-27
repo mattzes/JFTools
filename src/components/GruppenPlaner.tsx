@@ -375,10 +375,10 @@ function GruppeCard({
       {istATeil ? (
         <>
           {/* Header */}
-          <div style={{ display: "grid", gridTemplateColumns: istBTeil ? "42px 1.5fr 1.4fr 1.5fr 30px" : "42px 1.6fr 1.6fr 30px", padding: "6px 15px", fontSize: 9.5, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--color-neutral-600)", borderTop: "1px solid var(--color-divider)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: istBTeil ? "1.4fr 42px 1.5fr 1.5fr 30px" : "1.6fr 42px 1.6fr 30px", padding: "6px 15px", fontSize: 9.5, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--color-neutral-600)", borderTop: "1px solid var(--color-divider)" }}>
+            <div>Person</div>
             <div>Pos</div>
             <div>Knoten</div>
-            <div>Person</div>
             {istBTeil && <div>B-Teil-Läufer</div>}
             <div style={{ textAlign: "center" }}><i className="ph ph-drop-half" title="Wassergraben" /></div>
           </div>
@@ -391,6 +391,16 @@ function GruppeCard({
             const h = hind ? HIND_MAP[hind.status] : null;
             return (
               <PositionRow key={pos} gruppeId={gruppe.id} pos={pos} istBTeil={istBTeil}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                  {p ? (
+                    <MemberChip m={m!} p={p} from={gruppe.id} doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2} onRemove={() => onRemoveMember(m!.id)} />
+                  ) : (
+                    <span style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>frei — hierher ziehen</span>
+                  )}
+                </div>
+                <div>
+                  <span style={{ display: "inline-grid", placeItems: "center", width: 30, height: 24, borderRadius: 6, fontSize: 11, fontWeight: 700, background: "var(--color-neutral-800)", color: "var(--color-neutral-100)" }}>{pos}</span>
+                </div>
                 <div style={{ minWidth: 0 }}>
                   {hasKnoten ? (
                     <KnotenSelect
@@ -399,13 +409,6 @@ function GruppeCard({
                       onChange={(k) => onSetKnoten(pos, k)}
                     />
                   ) : null}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                  {p ? (
-                    <MemberChip m={m!} p={p} from={gruppe.id} doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2} onRemove={() => onRemoveMember(m!.id)} />
-                  ) : (
-                    <span style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>frei — hierher ziehen</span>
-                  )}
                 </div>
                 {istBTeil && (
                   <div style={{ fontSize: 11.5 }}>
@@ -492,14 +495,11 @@ function PositionRow({ gruppeId, pos, istBTeil, children }: { gruppeId: number; 
       ref={setNodeRef}
       style={{
         display: "grid",
-        gridTemplateColumns: istBTeil ? "42px 1.5fr 1.4fr 1.5fr 30px" : "42px 1.6fr 1.6fr 30px",
+        gridTemplateColumns: istBTeil ? "1.4fr 42px 1.5fr 1.5fr 30px" : "1.6fr 42px 1.6fr 30px",
         alignItems: "center", padding: "7px 15px", borderTop: "1px solid var(--color-divider)",
         background: isOver ? "color-mix(in srgb,var(--color-accent) 12%,transparent)" : "transparent",
       }}
     >
-      <div>
-        <span style={{ display: "inline-grid", placeItems: "center", width: 30, height: 24, borderRadius: 6, fontSize: 11, fontWeight: 700, background: "var(--color-neutral-800)", color: "var(--color-neutral-100)" }}>{pos}</span>
-      </div>
       {children}
     </div>
   );
