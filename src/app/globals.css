@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+@media (min-width: 48rem) {
+  .md\:flex { display: flex; }
+}
+@media (min-width: 64rem) {
+  .lg\:flex { display: flex; }
+  .lg\:inline-flex { display: inline-flex; }
+  .lg\:table { display: table; }
+  .lg\:block { display: block; }
+  .lg\:grid { display: grid; }
+  .lg\:hidden { display: none; }
+}
+
 /* ── Nocturne design tokens (aus dem Claude-Design-Projekt) ── */
 :root {
   --color-bg: #161826;

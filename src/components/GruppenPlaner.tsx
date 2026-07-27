@@ -434,8 +434,8 @@ function GruppeCard({
           )}
         </>
       ) : (
-        // nur_gruppen: freie Liste
-        <div style={{ padding: "10px 15px 13px", borderTop: "1px solid var(--color-divider)", display: "flex", flexWrap: "wrap", gap: 7, minHeight: 52 }}>
+        // nur_gruppen: Mitglieder als vertikale Liste (eine Person pro Zeile)
+        <div style={{ padding: "10px 15px 13px", borderTop: "1px solid var(--color-divider)", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, minHeight: 52 }}>
           {mitglieder.length === 0 && <span style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>Personen aus der Starterliste hierher ziehen</span>}
           {mitglieder.map((m) => {
             const p = personById.get(m.personId);
