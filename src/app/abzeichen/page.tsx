@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api, useApi, Person, personName } from "@/lib/api";
 import { PageHeader, Spinner, Empty, Dialog, DatePicker, fmtDate } from "@/components/ui";
-import { abzeichenVorschlag } from "@/lib/domain/alter";
+import { abzeichenVorschlag, alter, alterInDiesemJahr } from "@/lib/domain/alter";
 
 const BADGES = [
   {
@@ -188,6 +188,19 @@ function PersonDialog({
 }) {
   return (
     <Dialog title={`Abzeichen — ${personName(person)}`} onClose={onClose}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 22px", padding: "10px 12px", background: "var(--color-bg)", borderRadius: 9, marginBottom: 4 }}>
+        {([
+          ["Geburtsdatum", person.geburtsdatum ? fmtDate(person.geburtsdatum) : "—"],
+          ["Eintrittsdatum", person.eintrittsdatum ? fmtDate(person.eintrittsdatum) : "—"],
+          ["Alter", person.geburtsdatum ? `${alter(person.geburtsdatum)}` : "—"],
+          ["Jahrgangsalter", person.geburtsdatum ? `${alterInDiesemJahr(person.geburtsdatum)}` : "—"],
+        ] as [string, string][]).map(([label, value]) => (
+          <div key={label}>
+            <div style={{ fontSize: 10.5, color: "var(--color-neutral-500)", textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 500, marginTop: 2 }}>{value}</div>
+          </div>
+        ))}
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {BADGES.map((b) => {
           const datum = person[b.dateKey];
