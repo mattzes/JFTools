@@ -131,13 +131,16 @@ export const knotenZuordnungen = sqliteTable(
     terminId: integer("termin_id")
       .notNull()
       .references(() => termine.id, { onDelete: "cascade" }),
+    gruppeId: integer("gruppe_id")
+      .notNull()
+      .references(() => gruppen.id, { onDelete: "cascade" }),
     position: text("position", { enum: ["AF", "AM", "WF", "WM"] }).notNull(),
     knoten: text("knoten", {
       enum: ["Mastwurf", "Schotenstich", "Zimmermannsstich", "Kreuzknoten"],
     }).notNull(),
     ...timestamps,
   },
-  (t) => [uniqueIndex("knoten_termin_pos").on(t.terminId, t.position)],
+  (t) => [uniqueIndex("knoten_gruppe_pos").on(t.gruppeId, t.position)],
 );
 
 export const disziplinen = sqliteTable("disziplinen", {

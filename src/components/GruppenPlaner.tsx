@@ -47,9 +47,10 @@ export function GruppenPlaner({
   const personById = useMemo(() => new Map(personen.map((p) => [p.id, p])), [personen]);
   const hindByPerson = useMemo(() => new Map(hindernisse.map((h) => [h.personId, h])), [hindernisse]);
   const verfByPerson = useMemo(() => new Map(planung.verfuegbarkeiten.map((v) => [v.personId, v.status])), [planung.verfuegbarkeiten]);
+  // Knoten je Gruppe: Schlüssel "<gruppeId>:<position>"
   const knotenByPos = useMemo(() => {
     const m = new Map<string, string>();
-    planung.knoten.forEach((k) => m.set(k.position, k.knoten));
+    planung.knoten.forEach((k) => m.set(`${k.gruppeId}:${k.position}`, k.knoten));
     return m;
   }, [planung.knoten]);
 
@@ -92,12 +93,17 @@ export function GruppenPlaner({
     setBusy(false);
   }
 
-  async function setKnoten(position: string, knoten: string | null) {
-    const map = new Map(knotenByPos);
+  async function setKnoten(gruppeId: number, position: string, knoten: string | null) {
+    // aktuelle Knoten dieser Gruppe zusammenstellen, gewünschte Position ändern
+    const map = new Map<string, string>();
+    for (const pos of KNOTEN_POSITIONEN) {
+      const cur = knotenByPos.get(`${gruppeId}:${pos}`);
+      if (cur) map.set(pos, cur);
+    }
     if (knoten) map.set(position, knoten);
     else map.delete(position);
-    const arr = KNOTEN_POSITIONEN.filter((pos) => map.get(pos)).map((pos) => ({ position: pos, knoten: map.get(pos) }));
-    await api(`/termine/${termin.id}/knoten`, { method: "PUT", body: JSON.stringify(arr) });
+    const arr = [...map].map(([pos, kn]) => ({ position: pos, knoten: kn }));
+    await api(`/gruppen/${gruppeId}/knoten`, { method: "PUT", body: JSON.stringify(arr) });
     reload();
   }
 
@@ -233,7 +239,7 @@ export function GruppenPlaner({
                     hindByPerson={hindByPerson}
                     verfByPerson={verfByPerson}
                     knotenByPos={knotenByPos}
-                    onSetKnoten={setKnoten}
+                    onSetKnoten={(position, knoten) => setKnoten(g.id, position, knoten)}
                     gruppenCountByPerson={gruppenCountByPerson}
                     modus={modus}
                     istATeil={istATeil}
@@ -378,7 +384,7 @@ function GruppeCard({
   // Doppelt vergebene Knoten (unter den 4 Knoten-Positionen) für Warnung ermitteln
   const knotenCount = new Map<string, number>();
   for (const kp of KNOTEN_POSITIONEN) {
-    const k = knotenByPos.get(kp);
+    const k = knotenByPos.get(`${gruppe.id}:${kp}`);
     if (k) knotenCount.set(k, (knotenCount.get(k) ?? 0) + 1);
   }
   const doppelteKnoten = new Set([...knotenCount].filter(([, n]) => n > 1).map(([k]) => k));
@@ -410,7 +416,7 @@ function GruppeCard({
             const m = byPos.get(pos);
             const p = m ? personById.get(m.personId) : null;
             const hasKnoten = (KNOTEN_POSITIONEN as readonly string[]).includes(pos);
-            const knoten = knotenByPos.get(pos);
+            const knoten = knotenByPos.get(`${gruppe.id}:${pos}`);
             const hind = p ? hindByPerson.get(p.id) : null;
             const h = hind ? HIND_MAP[hind.status] : null;
             return (

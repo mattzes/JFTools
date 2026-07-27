@@ -95,7 +95,7 @@ export type Gruppenmitglied = {
   aTeilPosition: "GF" | "ME" | "MA" | "AF" | "AM" | "WF" | "WM" | "SF" | "SM" | null;
   bTeilLaeufer: number | null;
 };
-export type KnotenZuordnung = { id: number; terminId: number; position: "AF" | "AM" | "WF" | "WM"; knoten: string };
+export type KnotenZuordnung = { id: number; terminId: number; gruppeId: number; position: "AF" | "AM" | "WF" | "WM"; knoten: string };
 export type Disziplin = { id: number; name: string; einheit: string };
 export type Messung = {
   id: number;

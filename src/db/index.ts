@@ -83,12 +83,13 @@ CREATE TABLE IF NOT EXISTS gruppenmitglieder (
 CREATE TABLE IF NOT EXISTS knoten_zuordnungen (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   termin_id INTEGER NOT NULL REFERENCES termine(id) ON DELETE CASCADE,
+  gruppe_id INTEGER NOT NULL REFERENCES gruppen(id) ON DELETE CASCADE,
   position TEXT NOT NULL,
   knoten TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
-CREATE UNIQUE INDEX IF NOT EXISTS knoten_termin_pos ON knoten_zuordnungen(termin_id, position);
+CREATE UNIQUE INDEX IF NOT EXISTS knoten_gruppe_pos ON knoten_zuordnungen(gruppe_id, position);
 CREATE TABLE IF NOT EXISTS disziplinen (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -142,6 +143,16 @@ function migrate(sqlite: Database.Database) {
   const terminCols = sqlite.prepare("PRAGMA table_info(termine)").all() as { name: string }[];
   if (!terminCols.some((c) => c.name === "doppelstart_erlaubt")) {
     sqlite.exec("ALTER TABLE termine ADD COLUMN doppelstart_erlaubt INTEGER NOT NULL DEFAULT 1");
+  }
+
+  // Knoten von pro-Termin auf pro-Gruppe umstellen. Alte (per-Termin) Zuordnungen
+  // sind mit dem neuen Modell inkompatibel und werden verworfen.
+  const knotenCols = sqlite.prepare("PRAGMA table_info(knoten_zuordnungen)").all() as { name: string }[];
+  if (!knotenCols.some((c) => c.name === "gruppe_id")) {
+    sqlite.exec("DROP INDEX IF EXISTS knoten_termin_pos");
+    sqlite.exec("DELETE FROM knoten_zuordnungen");
+    sqlite.exec("ALTER TABLE knoten_zuordnungen ADD COLUMN gruppe_id INTEGER NOT NULL DEFAULT 0");
+    sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS knoten_gruppe_pos ON knoten_zuordnungen(gruppe_id, position)");
   }
 
   const cols = sqlite.prepare("PRAGMA table_info(personen)").all() as { name: string }[];
