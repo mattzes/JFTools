@@ -120,6 +120,15 @@ export function GruppenPlaner({
         gruppeId = Number(overId.replace("gruppe-", ""));
       }
 
+      // Position nicht doppelt besetzen: ist sie schon von einer anderen Person
+      // belegt, ist der Drop schlicht nicht möglich.
+      if (position) {
+        const besetzt = planung.mitglieder.some(
+          (m) => m.gruppeId === gruppeId && m.aTeilPosition === position && m.personId !== active.personId,
+        );
+        if (besetzt) return;
+      }
+
       const existing = planung.mitglieder.find((m) => m.gruppeId === gruppeId && m.personId === active.personId);
 
       if (active.from === "pool") {
@@ -405,7 +414,7 @@ function GruppeCard({
             const hind = p ? hindByPerson.get(p.id) : null;
             const h = hind ? HIND_MAP[hind.status] : null;
             return (
-              <PositionRow key={pos} gruppeId={gruppe.id} pos={pos} istBTeil={istBTeil}>
+              <PositionRow key={pos} gruppeId={gruppe.id} pos={pos} istBTeil={istBTeil} belegt={!!m}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
                   {p ? (
                     <MemberChip m={m!} p={p} from={gruppe.id} doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2} onRemove={() => onRemoveMember(m!.id)} />
@@ -503,8 +512,9 @@ function GruppeCard({
   );
 }
 
-function PositionRow({ gruppeId, pos, istBTeil, children }: { gruppeId: number; pos: string; istBTeil: boolean; children: React.ReactNode }) {
+function PositionRow({ gruppeId, pos, istBTeil, belegt, children }: { gruppeId: number; pos: string; istBTeil: boolean; belegt: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `pos-${gruppeId}-${pos}` });
+  const aktiv = isOver && !belegt; // nur freie Positionen hervorheben
   return (
     <div
       ref={setNodeRef}
@@ -512,7 +522,9 @@ function PositionRow({ gruppeId, pos, istBTeil, children }: { gruppeId: number; 
         display: "grid",
         gridTemplateColumns: istBTeil ? "1.4fr 42px 1.5fr 1.5fr 30px" : "1.6fr 42px 1.6fr 30px",
         alignItems: "center", padding: "7px 15px", borderTop: "1px solid var(--color-divider)",
-        background: isOver ? "color-mix(in srgb,var(--color-accent) 12%,transparent)" : "transparent",
+        background: aktiv ? "color-mix(in srgb,var(--color-accent) 12%,transparent)" : "transparent",
+        boxShadow: aktiv ? "inset 0 0 0 1.5px var(--color-accent)" : undefined,
+        borderRadius: aktiv ? 8 : undefined,
       }}
     >
       {children}
