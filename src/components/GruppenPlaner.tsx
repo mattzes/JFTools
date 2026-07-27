@@ -40,6 +40,7 @@ export function GruppenPlaner({
   const modus = termin.planungsmodus;
   const istATeil = modus === "a_teil" || modus === "a_und_b_teil";
   const istBTeil = modus === "a_und_b_teil";
+  const doppelstart = termin.doppelstartErlaubt;
 
   const [activePerson, setActivePerson] = useState<{ personId: number; from: "pool" | number } | null>(null);
   const [knotenDialog, setKnotenDialog] = useState(false);
@@ -66,6 +67,9 @@ export function GruppenPlaner({
     return m;
   }, [planung.mitglieder]);
 
+  // Ohne Doppelstart verschwinden bereits zugeteilte Starter aus der Liste links
+  const pool = doppelstart ? starter : starter.filter((p) => !(gruppenCountByPerson.get(p.id) ?? 0));
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const mitgliederByGruppe = (gid: number) => planung.mitglieder.filter((m) => m.gruppeId === gid);
@@ -81,6 +85,13 @@ export function GruppenPlaner({
     if (!confirm("Gruppe löschen?")) return;
     await api(`/gruppen/${id}`, { method: "DELETE" });
     reload();
+  }
+
+  async function toggleDoppelstart() {
+    setBusy(true);
+    await api(`/termine/${termin.id}`, { method: "PATCH", body: JSON.stringify({ doppelstartErlaubt: !doppelstart }) });
+    reload();
+    setBusy(false);
   }
 
   async function onDragEnd(e: DragEndEvent) {
@@ -105,10 +116,18 @@ export function GruppenPlaner({
       const existing = planung.mitglieder.find((m) => m.gruppeId === gruppeId && m.personId === active.personId);
 
       if (active.from === "pool") {
-        // Aus Starterliste: KOPIEREN (Doppelstart erlaubt) — außer schon in dieser Gruppe
         if (existing) {
           if (position) await api(`/gruppenmitglieder/${existing.id}`, { method: "PATCH", body: JSON.stringify({ aTeilPosition: position }) });
+        } else if (!doppelstart) {
+          // Ohne Doppelstart: bereits woanders zugeteilt → VERSCHIEBEN, sonst neu zuweisen
+          const andere = planung.mitglieder.find((m) => m.personId === active.personId);
+          if (andere) {
+            await api(`/gruppenmitglieder/${andere.id}`, { method: "PATCH", body: JSON.stringify({ gruppeId, aTeilPosition: position ?? andere.aTeilPosition }) });
+          } else {
+            await api("/gruppenmitglieder", { method: "POST", body: JSON.stringify({ gruppeId, personId: active.personId, aTeilPosition: position }) });
+          }
         } else {
+          // Doppelstart erlaubt: KOPIEREN (Person bleibt in der Starterliste)
           await api("/gruppenmitglieder", {
             method: "POST",
             body: JSON.stringify({ gruppeId, personId: active.personId, aTeilPosition: position }),
@@ -140,6 +159,15 @@ export function GruppenPlaner({
         sub={`${starter.length} Starter · ${planung.gruppen.length} ${planung.gruppen.length === 1 ? "Gruppe" : "Gruppen"}`}
       >
         <ModeTag modus={modus} />
+        <button
+          className="btn btn-secondary"
+          onClick={toggleDoppelstart}
+          disabled={busy}
+          title={doppelstart ? "Doppelstart erlaubt: Personen können mehreren Gruppen zugeteilt werden" : "Kein Doppelstart: jede Person nur in einer Gruppe"}
+        >
+          <i className={`ph ${doppelstart ? "ph-toggle-right" : "ph-toggle-left"}`} style={{ fontSize: 18, color: doppelstart ? "var(--color-accent-300)" : "var(--color-neutral-500)" }} />
+          Doppelstart {doppelstart ? "erlaubt" : "aus"}
+        </button>
         {istATeil && (
           <button className="btn btn-secondary" onClick={() => setKnotenDialog(true)}>
             <i className="ph ph-gear-six" />
@@ -164,7 +192,8 @@ export function GruppenPlaner({
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
           {/* Starterliste */}
           <StarterPool
-            starter={starter}
+            starter={pool}
+            doppelstart={doppelstart}
             hindByPerson={hindByPerson}
             gruppenCountByPerson={gruppenCountByPerson}
           />
@@ -234,10 +263,12 @@ export function GruppenPlaner({
 
 function StarterPool({
   starter,
+  doppelstart,
   hindByPerson,
   gruppenCountByPerson,
 }: {
   starter: Person[];
+  doppelstart: boolean;
   hindByPerson: Map<number, HindernisFaehigkeit>;
   gruppenCountByPerson: Map<number, number>;
 }) {
@@ -248,7 +279,9 @@ function StarterPool({
     >
       <div style={{ padding: "13px 14px 9px" }}>
         <div style={{ fontSize: 13, fontWeight: 600 }}>Starter</div>
-        <div style={{ fontSize: 10.5, color: "var(--color-neutral-500)", marginTop: 1 }}>aus Zusagen · ziehen zum Zuteilen</div>
+        <div style={{ fontSize: 10.5, color: "var(--color-neutral-500)", marginTop: 1 }}>
+          {doppelstart ? "aus Zusagen · ziehen zum Zuteilen" : "aus Zusagen · zugeteilte ausgeblendet"}
+        </div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
         {starter.length === 0 && (

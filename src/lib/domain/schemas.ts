@@ -82,6 +82,7 @@ export const terminSchema = z.object({
   planungsmodus: z.enum(PLANUNGSMODI),
   zielgruppe: z.enum(ZIELGRUPPEN).default("alle"),
   ort: z.string().nullish(),
+  doppelstartErlaubt: z.boolean().default(true),
 });
 
 export const verfuegbarkeitSchema = z.object({

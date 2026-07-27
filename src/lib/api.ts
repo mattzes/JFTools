@@ -67,6 +67,7 @@ export type Termin = {
   planungsmodus: "keine" | "nur_gruppen" | "a_teil" | "a_und_b_teil";
   zielgruppe: "alle" | "nur_betreuer" | "nur_jugendliche";
   ort: string | null;
+  doppelstartErlaubt: boolean;
 };
 
 export type Verfuegbarkeit = { id: number; personId: number; terminId: number; status: "ja" | "nein" | "offen" };

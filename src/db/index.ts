@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS termine (
   planungsmodus TEXT NOT NULL,
   zielgruppe TEXT NOT NULL DEFAULT 'alle',
   ort TEXT,
+  doppelstart_erlaubt INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -136,6 +137,11 @@ function migrate(sqlite: Database.Database) {
   const dokCols = sqlite.prepare("PRAGMA table_info(dokumententypen)").all() as { name: string }[];
   if (!dokCols.some((c) => c.name === "zielgruppe")) {
     sqlite.exec("ALTER TABLE dokumententypen ADD COLUMN zielgruppe TEXT NOT NULL DEFAULT 'alle'");
+  }
+
+  const terminCols = sqlite.prepare("PRAGMA table_info(termine)").all() as { name: string }[];
+  if (!terminCols.some((c) => c.name === "doppelstart_erlaubt")) {
+    sqlite.exec("ALTER TABLE termine ADD COLUMN doppelstart_erlaubt INTEGER NOT NULL DEFAULT 1");
   }
 
   const cols = sqlite.prepare("PRAGMA table_info(personen)").all() as { name: string }[];

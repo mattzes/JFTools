@@ -48,6 +48,7 @@ export const termine = sqliteTable("termine", {
     .notNull()
     .default("alle"),
   ort: text("ort"),
+  doppelstartErlaubt: integer("doppelstart_erlaubt", { mode: "boolean" }).notNull().default(true),
   ...timestamps,
 });
 
