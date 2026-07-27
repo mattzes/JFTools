@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { api, useApi, Person, Termin, Verfuegbarkeit, personName } from "@/lib/api";
 import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, fmtDate, fmtDateShort } from "@/components/ui";
 import { PLANUNGSMODI, ZIELGRUPPEN, Planungsmodus, Zielgruppe } from "@/lib/domain/constants";
@@ -10,15 +10,6 @@ const STATUS_CELL = {
   nein: { icon: "ph-x", c: "var(--danger)", bg: "rgba(232,110,110,.14)" },
   offen: { icon: "ph-minus", c: "var(--color-neutral-600)", bg: "transparent" },
 } as const;
-
-// Abhak-Buttons im Termin-Dialog (Ja / Nein / offen)
-const SEG_BTN = { display: "inline-grid", placeItems: "center", width: 34, height: 30, borderRadius: 8, fontSize: 13, border: 0, cursor: "pointer" } as const;
-const SEG_OFF = { background: "var(--color-neutral-800)", color: "var(--color-neutral-600)" } as const;
-const SEG_ON: Record<Verfuegbarkeit["status"], CSSProperties> = {
-  ja: { background: "var(--color-accent-900)", color: "var(--color-accent-200)" },
-  nein: { background: "rgba(232,110,110,.2)", color: "var(--danger)" },
-  offen: { background: "var(--color-neutral-700)", color: "var(--color-neutral-100)" },
-};
 
 const MODUS_LABEL: Record<Planungsmodus, string> = {
   keine: "keine — nur Verfügbarkeit",
@@ -205,42 +196,6 @@ export default function TerminePage() {
               <input className="input" value={form.ort} onChange={(e) => setForm({ ...form, ort: e.target.value })} />
             </div>
           </div>
-          {form.id && (() => {
-            const tid = form.id;
-            const ziel = zielPersonen({ zielgruppe: form.zielgruppe } as Termin);
-            return (
-              <div className="field">
-                <label>Anwesenheiten <span style={{ color: "var(--color-neutral-500)", fontWeight: 400 }}>· Ja / Nein / offen</span></label>
-                {ziel.length === 0 ? (
-                  <div style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>Keine Personen in der Zielgruppe.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto", paddingRight: 2 }}>
-                    {ziel.map((p) => {
-                      const s = cellMap.get(`${p.id}:${tid}`) ?? "offen";
-                      return (
-                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ flex: 1, minWidth: 0, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{personName(p)}</span>
-                          <div style={{ display: "flex", gap: 4, flex: "none" }}>
-                            {(["ja", "nein", "offen"] as const).map((st) => (
-                              <button
-                                key={st}
-                                type="button"
-                                onClick={() => setCell(p.id, tid, st)}
-                                aria-label={st}
-                                style={{ ...SEG_BTN, ...(s === st ? SEG_ON[st] : SEG_OFF) }}
-                              >
-                                <i className={`ph-bold ${STATUS_CELL[st].icon}`} />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
           {fehler && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{fehler}</div>}
           <div className="dialog-actions">
             {form.id && (
