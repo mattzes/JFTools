@@ -245,7 +245,7 @@ export function GruppenPlaner({
           </div>
         </div>
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={null}>
           {activeP && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 9, background: "var(--color-surface)", boxShadow: "var(--shadow-md)" }}>
               <span style={{ fontSize: 12, fontWeight: 500 }}>{personName(activeP)}</span>
@@ -286,27 +286,36 @@ function StarterPool({
           </div>
         )}
         {starter.map((p) => (
-          <StarterChip key={p.id} person={p} hind={hindByPerson.get(p.id)} doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2} />
+          <StarterChip
+            key={p.id}
+            person={p}
+            hind={hindByPerson.get(p.id)}
+            doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
+            zugewiesen={(gruppenCountByPerson.get(p.id) ?? 0) >= 1}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function StarterChip({ person, hind, doppel }: { person: Person; hind?: HindernisFaehigkeit; doppel: boolean }) {
+function StarterChip({ person, hind, doppel, zugewiesen }: { person: Person; hind?: HindernisFaehigkeit; doppel: boolean; zugewiesen: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `pool-${person.id}`,
     data: { personId: person.id, from: "pool" },
   });
   const h = hind ? HIND_MAP[hind.status] : null;
+  const borderColor = !zugewiesen ? "var(--warn)" : doppel ? "var(--color-accent-700)" : "var(--color-divider)";
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      title={!zugewiesen ? "noch keiner Gruppe zugewiesen" : undefined}
       style={{
         display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: 9,
-        background: "var(--color-bg)", border: `1px solid ${doppel ? "var(--color-accent-700)" : "var(--color-divider)"}`,
+        background: !zugewiesen ? "color-mix(in srgb, var(--warn) 10%, var(--color-bg))" : "var(--color-bg)",
+        border: `1px solid ${borderColor}`,
         cursor: "grab", opacity: isDragging ? 0.4 : 1, touchAction: "none",
       }}
     >
