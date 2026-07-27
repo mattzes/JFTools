@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -43,6 +43,8 @@ export function GruppenPlaner({
 
   const [activePerson, setActivePerson] = useState<{ personId: number; from: "pool" | number } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingAssigned, setPendingAssigned] = useState<Set<number>>(new Set());
+  const markPending = (id: number) => setPendingAssigned((prev) => new Set(prev).add(id));
 
   const personById = useMemo(() => new Map(personen.map((p) => [p.id, p])), [personen]);
   const hindByPerson = useMemo(() => new Map(hindernisse.map((h) => [h.personId, h])), [hindernisse]);
@@ -66,8 +68,19 @@ export function GruppenPlaner({
     return m;
   }, [planung.mitglieder]);
 
+  // Sobald die frischen Daten die Zuteilung zeigen, Pending-Markierung wieder lösen
+  useEffect(() => {
+    setPendingAssigned((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set([...prev].filter((id) => !(gruppenCountByPerson.get(id) ?? 0)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [gruppenCountByPerson]);
+
+  const istZugewiesen = (id: number) => (gruppenCountByPerson.get(id) ?? 0) >= 1 || pendingAssigned.has(id);
+
   // Ohne Doppelstart verschwinden bereits zugeteilte Starter aus der Liste links
-  const pool = doppelstart ? starter : starter.filter((p) => !(gruppenCountByPerson.get(p.id) ?? 0));
+  const pool = doppelstart ? starter : starter.filter((p) => !istZugewiesen(p.id));
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -142,6 +155,7 @@ export function GruppenPlaner({
           if (position) await api(`/gruppenmitglieder/${existing.id}`, { method: "PATCH", body: JSON.stringify({ aTeilPosition: position }) });
         } else if (!doppelstart) {
           // Ohne Doppelstart: bereits woanders zugeteilt → VERSCHIEBEN, sonst neu zuweisen
+          markPending(active.personId);
           const andere = planung.mitglieder.find((m) => m.personId === active.personId);
           if (andere) {
             await api(`/gruppenmitglieder/${andere.id}`, { method: "PATCH", body: JSON.stringify({ gruppeId, aTeilPosition: position ?? andere.aTeilPosition }) });
@@ -150,6 +164,7 @@ export function GruppenPlaner({
           }
         } else {
           // Doppelstart erlaubt: KOPIEREN (Person bleibt in der Starterliste)
+          markPending(active.personId);
           await api("/gruppenmitglieder", {
             method: "POST",
             body: JSON.stringify({ gruppeId, personId: active.personId, aTeilPosition: position }),
@@ -212,6 +227,7 @@ export function GruppenPlaner({
             doppelstart={doppelstart}
             hindByPerson={hindByPerson}
             gruppenCountByPerson={gruppenCountByPerson}
+            istZugewiesen={istZugewiesen}
           />
 
           {/* Gruppen */}
@@ -277,11 +293,13 @@ function StarterPool({
   doppelstart,
   hindByPerson,
   gruppenCountByPerson,
+  istZugewiesen,
 }: {
   starter: Person[];
   doppelstart: boolean;
   hindByPerson: Map<number, HindernisFaehigkeit>;
   gruppenCountByPerson: Map<number, number>;
+  istZugewiesen: (id: number) => boolean;
 }) {
   return (
     <div
@@ -306,7 +324,7 @@ function StarterPool({
             person={p}
             hind={hindByPerson.get(p.id)}
             doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
-            zugewiesen={(gruppenCountByPerson.get(p.id) ?? 0) >= 1}
+            zugewiesen={istZugewiesen(p.id)}
           />
         ))}
       </div>
