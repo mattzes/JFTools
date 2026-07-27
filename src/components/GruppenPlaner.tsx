@@ -13,9 +13,9 @@ import {
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
-import { api, Person, Planung, HindernisFaehigkeit, Gruppe, Gruppenmitglied, KnotenZuordnung, personName } from "@/lib/api";
-import { ModeTag, PageHeader, Dialog } from "@/components/ui";
-import { A_TEIL_POSITIONEN, A_TEIL_LABELS, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN, KnotenPosition, Knoten } from "@/lib/domain/constants";
+import { api, Person, Planung, HindernisFaehigkeit, Gruppe, Gruppenmitglied, personName } from "@/lib/api";
+import { ModeTag, PageHeader } from "@/components/ui";
+import { A_TEIL_POSITIONEN, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN } from "@/lib/domain/constants";
 import { gruppenAlter, sollZeitLabel, gruppenWarnungen } from "@/lib/domain/planung";
 
 const HIND_MAP = {
@@ -42,7 +42,6 @@ export function GruppenPlaner({
   const doppelstart = termin.doppelstartErlaubt;
 
   const [activePerson, setActivePerson] = useState<{ personId: number; from: "pool" | number } | null>(null);
-  const [knotenDialog, setKnotenDialog] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const personById = useMemo(() => new Map(personen.map((p) => [p.id, p])), [personen]);
@@ -91,6 +90,15 @@ export function GruppenPlaner({
     await api(`/termine/${termin.id}`, { method: "PATCH", body: JSON.stringify({ doppelstartErlaubt: !doppelstart }) });
     reload();
     setBusy(false);
+  }
+
+  async function setKnoten(position: string, knoten: string | null) {
+    const map = new Map(knotenByPos);
+    if (knoten) map.set(position, knoten);
+    else map.delete(position);
+    const arr = KNOTEN_POSITIONEN.filter((pos) => map.get(pos)).map((pos) => ({ position: pos, knoten: map.get(pos) }));
+    await api(`/termine/${termin.id}/knoten`, { method: "PUT", body: JSON.stringify(arr) });
+    reload();
   }
 
   async function onDragEnd(e: DragEndEvent) {
@@ -167,12 +175,6 @@ export function GruppenPlaner({
           <i className={`ph ${doppelstart ? "ph-toggle-right" : "ph-toggle-left"}`} style={{ fontSize: 18, color: doppelstart ? "var(--color-accent-300)" : "var(--color-neutral-500)" }} />
           Doppelstart {doppelstart ? "erlaubt" : "aus"}
         </button>
-        {istATeil && (
-          <button className="btn btn-secondary" onClick={() => setKnotenDialog(true)}>
-            <i className="ph ph-gear-six" />
-            Knoten
-          </button>
-        )}
         <button className="btn btn-primary" onClick={addGruppe} disabled={busy}>
           <i className="ph ph-plus" />
           Gruppe
@@ -216,6 +218,7 @@ export function GruppenPlaner({
                     hindByPerson={hindByPerson}
                     verfByPerson={verfByPerson}
                     knotenByPos={knotenByPos}
+                    onSetKnoten={setKnoten}
                     gruppenCountByPerson={gruppenCountByPerson}
                     modus={modus}
                     istATeil={istATeil}
@@ -244,18 +247,6 @@ export function GruppenPlaner({
           )}
         </DragOverlay>
       </DndContext>
-
-      {knotenDialog && (
-        <KnotenDialog
-          terminId={termin.id}
-          current={planung.knoten}
-          onClose={() => setKnotenDialog(false)}
-          onSaved={() => {
-            setKnotenDialog(false);
-            reload();
-          }}
-        />
-      )}
     </>
   );
 }
@@ -327,6 +318,7 @@ function GruppeCard({
   hindByPerson,
   verfByPerson,
   knotenByPos,
+  onSetKnoten,
   gruppenCountByPerson,
   modus,
   istATeil,
@@ -341,6 +333,7 @@ function GruppeCard({
   hindByPerson: Map<number, HindernisFaehigkeit>;
   verfByPerson: Map<number, string>;
   knotenByPos: Map<string, string>;
+  onSetKnoten: (position: string, knoten: string | null) => void;
   gruppenCountByPerson: Map<number, number>;
   modus: string;
   istATeil: boolean;
@@ -357,6 +350,14 @@ function GruppeCard({
   const byPos = new Map<string, Gruppenmitglied>();
   mitglieder.forEach((m) => m.aTeilPosition && byPos.set(m.aTeilPosition, m));
   const ohnePos = mitglieder.filter((m) => !m.aTeilPosition);
+
+  // Doppelt vergebene Knoten (unter den 4 Knoten-Positionen) für Warnung ermitteln
+  const knotenCount = new Map<string, number>();
+  for (const kp of KNOTEN_POSITIONEN) {
+    const k = knotenByPos.get(kp);
+    if (k) knotenCount.set(k, (knotenCount.get(k) ?? 0) + 1);
+  }
+  const doppelteKnoten = new Set([...knotenCount].filter(([, n]) => n > 1).map(([k]) => k));
 
   return (
     <div ref={setNodeRef} className="panel" style={{ border: `1px solid ${isOver ? "var(--color-accent)" : "var(--color-accent-800)"}`, ...(istATeil ? {} : { width: 280, flex: "none" }) }}>
@@ -376,7 +377,7 @@ function GruppeCard({
           {/* Header */}
           <div style={{ display: "grid", gridTemplateColumns: istBTeil ? "42px 1.5fr 1.4fr 1.5fr 30px" : "42px 1.6fr 1.6fr 30px", padding: "6px 15px", fontSize: 9.5, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--color-neutral-600)", borderTop: "1px solid var(--color-divider)" }}>
             <div>Pos</div>
-            <div>A-Teil / Knoten</div>
+            <div>Knoten</div>
             <div>Person</div>
             {istBTeil && <div>B-Teil-Läufer</div>}
             <div style={{ textAlign: "center" }}><i className="ph ph-drop-half" title="Wassergraben" /></div>
@@ -391,13 +392,13 @@ function GruppeCard({
             return (
               <PositionRow key={pos} gruppeId={gruppe.id} pos={pos} istBTeil={istBTeil}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{A_TEIL_LABELS[pos]}</div>
-                  {hasKnoten && knoten && (
-                    <span className="ph-tag" style={{ background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)", padding: "1px 7px", marginTop: 2 }}>
-                      <i className="ph ph-link-simple" />{knoten}
-                    </span>
-                  )}
-                  {hasKnoten && !knoten && <span style={{ fontSize: 10, color: "var(--color-neutral-600)" }}>Knoten offen</span>}
+                  {hasKnoten ? (
+                    <KnotenSelect
+                      value={knoten ?? ""}
+                      doppelt={!!knoten && doppelteKnoten.has(knoten)}
+                      onChange={(k) => onSetKnoten(pos, k)}
+                    />
+                  ) : null}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
                   {p ? (
@@ -583,48 +584,22 @@ function Stat({ n, l }: { n: number; l: string }) {
   );
 }
 
-function KnotenDialog({
-  terminId,
-  current,
-  onClose,
-  onSaved,
-}: {
-  terminId: number;
-  current: KnotenZuordnung[];
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const init: Record<KnotenPosition, Knoten> = { AF: "Schotenstich", AM: "Zimmermannsstich", WF: "Mastwurf", WM: "Kreuzknoten" };
-  current.forEach((k) => (init[k.position as KnotenPosition] = k.knoten as Knoten));
-  const [sel, setSel] = useState(init);
-
-  async function save() {
-    await api(`/termine/${terminId}/knoten`, {
-      method: "PUT",
-      body: JSON.stringify(KNOTEN_POSITIONEN.map((pos) => ({ position: pos, knoten: sel[pos] }))),
-    });
-    onSaved();
-  }
-
+function KnotenSelect({ value, doppelt, onChange }: { value: string; doppelt: boolean; onChange: (knoten: string | null) => void }) {
   return (
-    <Dialog title="Knoten-Zuordnung (je Wettbewerb)" onClose={onClose}>
-      <div style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
-        Welche der 4 Knoten bindet welche Position bei diesem Wettbewerb? Nur AF, AM, WF, WM binden einen Knoten.
-      </div>
-      {KNOTEN_POSITIONEN.map((pos) => (
-        <div key={pos} className="field">
-          <label>{pos} — {A_TEIL_LABELS[pos]}</label>
-          <select className="input" value={sel[pos]} onChange={(e) => setSel({ ...sel, [pos]: e.target.value as Knoten })}>
-            {KNOTEN.map((k) => (
-              <option key={k} value={k}>{k}</option>
-            ))}
-          </select>
-        </div>
-      ))}
-      <div className="dialog-actions">
-        <button className="btn btn-secondary" onClick={onClose}>Abbrechen</button>
-        <button className="btn btn-primary" onClick={save}><i className="ph ph-check" />Speichern</button>
-      </div>
-    </Dialog>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+      <select
+        className="input"
+        title={doppelt ? "Knoten in dieser Gruppe doppelt vergeben" : undefined}
+        style={{ minHeight: 28, padding: "2px 6px", fontSize: 11.5, width: "auto", display: "inline-block", ...(doppelt ? { borderColor: "var(--danger)", color: "var(--danger)" } : {}) }}
+        value={value}
+        onChange={(e) => onChange(e.target.value || null)}
+      >
+        <option value="">— offen —</option>
+        {KNOTEN.map((k) => (
+          <option key={k} value={k}>{k}</option>
+        ))}
+      </select>
+      {doppelt && <i className="ph ph-warning" style={{ color: "var(--danger)", fontSize: 14, flex: "none" }} title="Knoten doppelt vergeben" />}
+    </span>
   );
 }
