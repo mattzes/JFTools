@@ -87,7 +87,7 @@ export default function RueckmeldungenPage() {
         </button>
         <button className="btn btn-secondary" onClick={() => setNeuerTyp({ name: "", zielgruppe: "alle" })}>
           <i className="ph ph-plus" />
-          Dokumenttyp
+          Rückmeldung hinzufügen
         </button>
       </PageHeader>
 
@@ -198,7 +198,7 @@ export default function RueckmeldungenPage() {
       )}
 
       {neuerTyp !== null && (
-        <Dialog title="Neuer Dokumenttyp" onClose={() => setNeuerTyp(null)}>
+        <Dialog title="Rückmeldung hinzufügen" onClose={() => setNeuerTyp(null)}>
           <div className="field">
             <label>Name</label>
             <input className="input" autoFocus placeholder="z. B. Gesundheitsbogen Zeltlager" value={neuerTyp.name} onChange={(e) => setNeuerTyp({ ...neuerTyp, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addTyp()} />
