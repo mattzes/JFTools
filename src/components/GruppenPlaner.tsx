@@ -208,7 +208,13 @@ export function GruppenPlaner({
                 <button className="btn btn-primary" onClick={addGruppe}><i className="ph ph-plus" />Erste Gruppe</button>
               </div>
             ) : (
-              <div style={istATeil ? { display: "flex", flexDirection: "column", gap: 16 } : { display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 16 }}>
+              <div
+                style={
+                  istATeil
+                    ? { display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${istBTeil ? 540 : 440}px), 1fr))`, alignItems: "start", gap: 16 }
+                    : { display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 16 }
+                }
+              >
                 {planung.gruppen.map((g) => (
                   <GruppeCard
                     key={g.id}
