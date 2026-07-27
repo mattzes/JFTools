@@ -16,7 +16,6 @@ import {
 import { api, Person, Planung, HindernisFaehigkeit, Gruppe, Gruppenmitglied, KnotenZuordnung, personName } from "@/lib/api";
 import { ModeTag, PageHeader, Dialog } from "@/components/ui";
 import { A_TEIL_POSITIONEN, A_TEIL_LABELS, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN, KnotenPosition, Knoten } from "@/lib/domain/constants";
-import { alterInDiesemJahr } from "@/lib/domain/alter";
 import { gruppenAlter, sollZeitLabel, gruppenWarnungen } from "@/lib/domain/planung";
 
 const HIND_MAP = {
@@ -207,7 +206,7 @@ export function GruppenPlaner({
                 <button className="btn btn-primary" onClick={addGruppe}><i className="ph ph-plus" />Erste Gruppe</button>
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div style={istATeil ? { display: "flex", flexDirection: "column", gap: 16 } : { display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 16 }}>
                 {planung.gruppen.map((g) => (
                   <GruppeCard
                     key={g.id}
@@ -314,10 +313,7 @@ function StarterChip({ person, hind, doppel }: { person: Person; hind?: Hinderni
         cursor: "grab", opacity: isDragging ? 0.4 : 1, touchAction: "none",
       }}
     >
-      <div style={{ flex: 1, minWidth: 0, lineHeight: 1.15 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(person)}</div>
-        <div style={{ fontSize: 9.5, color: "var(--color-neutral-500)" }}>Jg.-Alter {person.geburtsdatum ? alterInDiesemJahr(person.geburtsdatum) : "?"}</div>
-      </div>
+      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(person)}</div>
       {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 5px" }}>2×</span>}
       {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 14 }} title={h.title} />}
     </div>
@@ -363,7 +359,7 @@ function GruppeCard({
   const ohnePos = mitglieder.filter((m) => !m.aTeilPosition);
 
   return (
-    <div ref={setNodeRef} className="panel" style={{ border: `1px solid ${isOver ? "var(--color-accent)" : "var(--color-accent-800)"}` }}>
+    <div ref={setNodeRef} className="panel" style={{ border: `1px solid ${isOver ? "var(--color-accent)" : "var(--color-accent-800)"}`, ...(istATeil ? {} : { width: 280, flex: "none" }) }}>
       <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 15px" }}>
         <i className="ph ph-users-three" style={{ color: "var(--color-accent-300)" }} />
         <h4 style={{ margin: 0, fontSize: 15 }}>{gruppe.name}</h4>
@@ -435,11 +431,22 @@ function GruppeCard({
         </>
       ) : (
         // nur_gruppen: Mitglieder als vertikale Liste (eine Person pro Zeile)
-        <div style={{ padding: "10px 15px 13px", borderTop: "1px solid var(--color-divider)", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, minHeight: 52 }}>
+        <div style={{ padding: "10px 15px 13px", borderTop: "1px solid var(--color-divider)", display: "flex", flexDirection: "column", gap: 6, minHeight: 52 }}>
           {mitglieder.length === 0 && <span style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>Personen aus der Starterliste hierher ziehen</span>}
-          {mitglieder.map((m) => {
+          {mitglieder.map((m, i) => {
             const p = personById.get(m.personId);
-            return p ? <MemberChip key={m.id} m={m} p={p} from={gruppe.id} doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2} onRemove={() => onRemoveMember(m.id)} /> : null;
+            return p ? (
+              <MemberRow
+                key={m.id}
+                index={i + 1}
+                m={m}
+                p={p}
+                from={gruppe.id}
+                doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
+                hind={hindByPerson.get(p.id)}
+                onRemove={() => onRemoveMember(m.id)}
+              />
+            ) : null;
           })}
         </div>
       )}
@@ -493,6 +500,42 @@ function PositionRow({ gruppeId, pos, istBTeil, children }: { gruppeId: number; 
         <span style={{ display: "inline-grid", placeItems: "center", width: 30, height: 24, borderRadius: 6, fontSize: 11, fontWeight: 700, background: "var(--color-neutral-800)", color: "var(--color-neutral-100)" }}>{pos}</span>
       </div>
       {children}
+    </div>
+  );
+}
+
+function MemberRow({ index, m, p, from, doppel, hind, onRemove }: { index: number; m: Gruppenmitglied; p: Person; from: number; doppel: boolean; hind?: HindernisFaehigkeit; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `member-${m.id}`,
+    data: { personId: p.id, from },
+  });
+  const h = hind ? HIND_MAP[hind.status] : null;
+  return (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 10px", borderRadius: 10,
+        background: "var(--color-bg)", border: `1px solid ${doppel ? "var(--color-accent-700)" : "var(--color-divider)"}`,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+    >
+      <span style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, flex: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
+        {index}
+      </span>
+      <span
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, cursor: "grab", touchAction: "none" }}
+        title="ziehen zum Verschieben"
+      >
+        <i className="ph ph-dots-six-vertical" style={{ color: "var(--color-neutral-600)", fontSize: 15, flex: "none" }} />
+        <span style={{ minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(p)}</span>
+      </span>
+      {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 6px", flex: "none" }}>2×</span>}
+      {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 15, flex: "none" }} title={h.title} />}
+      <button onClick={onRemove} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-600)", padding: 2, flex: "none" }} aria-label="Entfernen">
+        <i className="ph ph-x" style={{ fontSize: 14 }} />
+      </button>
     </div>
   );
 }
