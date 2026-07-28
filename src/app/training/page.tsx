@@ -77,7 +77,7 @@ export default function TrainingPage() {
   return (
     <>
       {/* Kategorie-Umschaltung in der Kopfzeile (segmentiert wie Matrix/Liste bei Terminen) */}
-      <PageHeader title="Training">
+      <PageHeader title="Training" sub="Leistungen der Jugendlichen erfassen und im Blick behalten">
         <div style={{ overflowX: "auto", maxWidth: "100%" }}>
           <div className="seg" style={{ fontSize: 12 }}>
             {TRAINING_KATEGORIEN.map((k) => (
