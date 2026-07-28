@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { BackupDialog } from "./BackupDialog";
 
 const NAV_ITEMS = [
   { href: "/", icon: "ph-house", label: "Übersicht", key: "dashboard" },
@@ -30,6 +31,7 @@ function isActive(pathname: string, href: string) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
 
   return (
     <div className="flex h-dvh overflow-hidden">
@@ -107,19 +109,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         })}
         <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--color-divider)" }}>
-          <a
-            href="/api/v1/backup"
-            download
+          <button
+            type="button"
+            onClick={() => setBackupOpen(true)}
             title={collapsed ? "Backup" : undefined}
             style={{
-              display: "flex", alignItems: "center", gap: 11, padding: "9px 11px",
-              justifyContent: collapsed ? "center" : "flex-start",
-              borderRadius: 8, fontSize: 13, color: "var(--color-neutral-300)", textDecoration: "none",
+              display: "flex", alignItems: "center", gap: 11, padding: "9px 11px", width: "100%",
+              justifyContent: collapsed ? "center" : "flex-start", border: 0, background: "transparent",
+              borderRadius: 8, fontSize: 13, color: "var(--color-neutral-300)", cursor: "pointer", textAlign: "left",
             }}
           >
-            <i className="ph ph-download-simple" style={{ fontSize: 18 }} />
+            <i className="ph ph-database" style={{ fontSize: 18 }} />
             {!collapsed && <span>Backup</span>}
-          </a>
+          </button>
         </div>
       </nav>
 
@@ -156,6 +158,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         })}
       </div>
+
+      {backupOpen && <BackupDialog onClose={() => setBackupOpen(false)} />}
     </div>
   );
 }
