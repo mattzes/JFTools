@@ -165,6 +165,22 @@ export const messungen = sqliteTable("messungen", {
   ...timestamps,
 });
 
+// Training: Teilnahme pro Kategorie + Notiz pro Person + statische Auswahl (Wassergraben/Leinbeutel)
+export const trainingEintraege = sqliteTable(
+  "training_eintraege",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    personId: integer("person_id")
+      .notNull()
+      .references(() => personen.id, { onDelete: "cascade" }),
+    kategorie: text("kategorie").notNull(),
+    notiz: text("notiz"),
+    wert: text("wert"),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("training_person_kat").on(t.personId, t.kategorie)],
+);
+
 export const hindernisFaehigkeiten = sqliteTable(
   "hindernis_faehigkeiten",
   {

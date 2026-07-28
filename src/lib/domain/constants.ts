@@ -79,7 +79,56 @@ export const B_TEIL_AUFGABEN: Record<number, string> = {
   9: "Leinenbeutel werfen",
 };
 
-export const DISZIPLINEN_SEED = ["Handschuhe Anziehen", "Tunnel", "Schlauchrollen", "Strahlrohr Einbinden"];
+// Feste Zeit-/Knoten-Disziplinen (Training). Die 4 Knoten teilen sich die KNOTEN-Konstante.
+export const DISZIPLINEN_SEED = [
+  "Strahlrohreinbinden",
+  "Schlauchrollen",
+  "Tunnel",
+  "Anziehen",
+  ...KNOTEN,
+];
+
+// ── Training: feste Kategorien ──
+// kind bestimmt die Darstellung/Erfassung:
+//   zeit         → Zeit-Tabelle (Best/Ø/Letzte/Verlauf), Notiz pro Person
+//   knoten       → 4 Unterzeilen pro Person (die 4 Knoten), Notiz pro Person
+//   wassergraben → statische Einzelauswahl pro Person
+//   leinbeutel   → statische Einzelauswahl pro Person
+export type TrainingKind = "zeit" | "knoten" | "wassergraben" | "leinbeutel";
+export type TrainingKategorie = {
+  key: string;
+  label: string;
+  kind: TrainingKind;
+  disziplin?: string; // kind === "zeit": zugehörige Disziplin
+  disziplinen?: readonly string[]; // kind === "knoten": die 4 Knoten
+};
+
+export const TRAINING_KATEGORIEN: readonly TrainingKategorie[] = [
+  { key: "wassergraben", label: "Wassergraben", kind: "wassergraben" },
+  { key: "strahlrohr", label: "Strahlrohreinbinden", kind: "zeit", disziplin: "Strahlrohreinbinden" },
+  { key: "schlauchrollen", label: "Schlauchrollen", kind: "zeit", disziplin: "Schlauchrollen" },
+  { key: "tunnel", label: "Tunnel", kind: "zeit", disziplin: "Tunnel" },
+  { key: "anziehen", label: "Anziehen", kind: "zeit", disziplin: "Anziehen" },
+  { key: "leinbeutel", label: "Leinbeutelwerfen", kind: "leinbeutel" },
+  { key: "knoten", label: "Knoten", kind: "knoten", disziplinen: KNOTEN },
+];
+
+// Statische Auswahl-Werte (in training_eintraege.wert gespeichert; null = nicht eingetragen)
+export const WASSERGRABEN_WERTE = ["ohne", "verteiler", "schlauchpaket"] as const;
+export type WassergrabenWert = (typeof WASSERGRABEN_WERTE)[number];
+export const WASSERGRABEN_LABELS: Record<WassergrabenWert, string> = {
+  ohne: "ohne Geräte",
+  verteiler: "mit Verteiler",
+  schlauchpaket: "mit Schlauchpaket",
+};
+
+export const LEINBEUTEL_WERTE = ["getroffen", "zu_kurz", "vorbeigeworfen"] as const;
+export type LeinbeutelWert = (typeof LEINBEUTEL_WERTE)[number];
+export const LEINBEUTEL_LABELS: Record<LeinbeutelWert, string> = {
+  getroffen: "getroffen",
+  zu_kurz: "zu kurz",
+  vorbeigeworfen: "vorbeigeworfen",
+};
 
 export const DOKUMENTTYP_SEED = ["Einverständniserklärung"];
 

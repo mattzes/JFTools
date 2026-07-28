@@ -12,7 +12,7 @@ import {
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
-import { api, Person, Planung, HindernisFaehigkeit, Gruppe, Gruppenmitglied, Termin, Verfuegbarkeit, personName } from "@/lib/api";
+import { api, Person, Planung, Gruppe, Gruppenmitglied, Termin, Verfuegbarkeit, personName } from "@/lib/api";
 import { ModeTag, PageHeader, SortArrow, Th, fmtDateShort, useSort, sortRows } from "@/components/ui";
 import { A_TEIL_POSITIONEN, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN } from "@/lib/domain/constants";
 import { gruppenAlter, sollZeitLabel, gruppenWarnungen } from "@/lib/domain/planung";
@@ -29,23 +29,15 @@ const VERF_STYLE = {
 
 const VERF_RANK = { ja: 0, nein: 1, offen: 2 } as const;
 
-const HIND_MAP = {
-  ja: { icon: "ph-check-circle", c: "var(--color-accent-300)", title: "Wassergraben ok" },
-  unsicher: { icon: "ph-warning-circle", c: "var(--warn)", title: "Wassergraben unsicher" },
-  nein: { icon: "ph-x-circle", c: "var(--danger)", title: "Wassergraben nicht geschafft" },
-} as const;
-
 export function GruppenPlaner({
   personen,
   planung,
-  hindernisse,
   termine,
   alleVerf,
   reload,
 }: {
   personen: Person[];
   planung: Planung;
-  hindernisse: HindernisFaehigkeit[];
   termine: Termin[];
   alleVerf: Verfuegbarkeit[];
   reload: () => void;
@@ -76,7 +68,6 @@ export function GruppenPlaner({
   const infoTermine = useMemo(() => andereTermine.filter((t) => info.termine.includes(t.id)), [andereTermine, info.termine]);
 
   const personById = useMemo(() => new Map(personen.map((p) => [p.id, p])), [personen]);
-  const hindByPerson = useMemo(() => new Map(hindernisse.map((h) => [h.personId, h])), [hindernisse]);
   const verfByPerson = useMemo(() => new Map(planung.verfuegbarkeiten.map((v) => [v.personId, v.status])), [planung.verfuegbarkeiten]);
   // Knoten je Gruppe: Schlüssel "<gruppeId>:<position>"
   const knotenByPos = useMemo(() => {
@@ -255,7 +246,6 @@ export function GruppenPlaner({
           <StarterPool
             starter={pool}
             doppelstart={doppelstart}
-            hindByPerson={hindByPerson}
             gruppenCountByPerson={gruppenCountByPerson}
             istZugewiesen={istZugewiesen}
             info={info}
@@ -285,7 +275,6 @@ export function GruppenPlaner({
                     gruppe={g}
                     mitglieder={mitgliederByGruppe(g.id)}
                     personById={personById}
-                    hindByPerson={hindByPerson}
                     verfByPerson={verfByPerson}
                     knotenByPos={knotenByPos}
                     onSetKnoten={(position, knoten) => setKnoten(g.id, position, knoten)}
@@ -324,7 +313,6 @@ export function GruppenPlaner({
 function StarterPool({
   starter,
   doppelstart,
-  hindByPerson,
   gruppenCountByPerson,
   istZugewiesen,
   info,
@@ -333,7 +321,6 @@ function StarterPool({
 }: {
   starter: Person[];
   doppelstart: boolean;
-  hindByPerson: Map<number, HindernisFaehigkeit>;
   gruppenCountByPerson: Map<number, number>;
   istZugewiesen: (id: number) => boolean;
   info: StarterInfo;
@@ -366,7 +353,6 @@ function StarterPool({
             info={info}
             infoTermine={infoTermine}
             verfByPT={verfByPT}
-            hindByPerson={hindByPerson}
             gruppenCountByPerson={gruppenCountByPerson}
             istZugewiesen={istZugewiesen}
           />
@@ -377,7 +363,6 @@ function StarterPool({
             <StarterChip
               key={p.id}
               person={p}
-              hind={hindByPerson.get(p.id)}
               doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
               zugewiesen={istZugewiesen(p.id)}
             />
@@ -393,7 +378,6 @@ function StarterTable({
   info,
   infoTermine,
   verfByPT,
-  hindByPerson,
   gruppenCountByPerson,
   istZugewiesen,
 }: {
@@ -401,7 +385,6 @@ function StarterTable({
   info: StarterInfo;
   infoTermine: Termin[];
   verfByPT: Map<string, Verfuegbarkeit["status"]>;
-  hindByPerson: Map<number, HindernisFaehigkeit>;
   gruppenCountByPerson: Map<number, number>;
   istZugewiesen: (id: number) => boolean;
 }) {
@@ -446,7 +429,6 @@ function StarterTable({
             info={info}
             infoTermine={infoTermine}
             verfByPT={verfByPT}
-            hind={hindByPerson.get(p.id)}
             doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
             zugewiesen={istZugewiesen(p.id)}
           />
@@ -461,7 +443,6 @@ function StarterRow({
   info,
   infoTermine,
   verfByPT,
-  hind,
   doppel,
   zugewiesen,
 }: {
@@ -469,7 +450,6 @@ function StarterRow({
   info: StarterInfo;
   infoTermine: Termin[];
   verfByPT: Map<string, Verfuegbarkeit["status"]>;
-  hind?: HindernisFaehigkeit;
   doppel: boolean;
   zugewiesen: boolean;
 }) {
@@ -477,7 +457,6 @@ function StarterRow({
     id: `pool-${person.id}`,
     data: { personId: person.id, from: "pool" },
   });
-  const h = hind ? HIND_MAP[hind.status] : null;
   return (
     <tr
       ref={setNodeRef}
@@ -494,7 +473,6 @@ function StarterRow({
           <i className="ph ph-dots-six-vertical" style={{ color: "var(--color-neutral-600)", fontSize: 14, flex: "none" }} />
           <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{personName(person)}</span>
           {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 5px", flex: "none" }}>2×</span>}
-          {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 14, flex: "none" }} title={h.title} />}
         </span>
       </td>
       {info.alter && <td style={{ textAlign: "center" }}>{person.geburtsdatum ? alter(person.geburtsdatum) : "—"}</td>}
@@ -512,12 +490,11 @@ function StarterRow({
   );
 }
 
-function StarterChip({ person, hind, doppel, zugewiesen }: { person: Person; hind?: HindernisFaehigkeit; doppel: boolean; zugewiesen: boolean }) {
+function StarterChip({ person, doppel, zugewiesen }: { person: Person; doppel: boolean; zugewiesen: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `pool-${person.id}`,
     data: { personId: person.id, from: "pool" },
   });
-  const h = hind ? HIND_MAP[hind.status] : null;
   const borderColor = !zugewiesen ? "var(--warn)" : doppel ? "var(--color-accent-700)" : "var(--color-divider)";
   return (
     <div
@@ -534,7 +511,6 @@ function StarterChip({ person, hind, doppel, zugewiesen }: { person: Person; hin
     >
       <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(person)}</div>
       {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 5px" }}>2×</span>}
-      {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 14 }} title={h.title} />}
     </div>
   );
 }
@@ -616,7 +592,6 @@ function GruppeCard({
   gruppe,
   mitglieder,
   personById,
-  hindByPerson,
   verfByPerson,
   knotenByPos,
   onSetKnoten,
@@ -631,7 +606,6 @@ function GruppeCard({
   gruppe: Gruppe;
   mitglieder: Gruppenmitglied[];
   personById: Map<number, Person>;
-  hindByPerson: Map<number, HindernisFaehigkeit>;
   verfByPerson: Map<number, string>;
   knotenByPos: Map<string, string>;
   onSetKnoten: (position: string, knoten: string | null) => void;
@@ -676,20 +650,17 @@ function GruppeCard({
       {istATeil ? (
         <>
           {/* Header */}
-          <div style={{ display: "grid", gridTemplateColumns: istBTeil ? "1.4fr 42px 1.5fr 1.5fr 30px" : "1.6fr 42px 1.6fr 30px", padding: "6px 15px", fontSize: 9.5, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--color-neutral-600)", borderTop: "1px solid var(--color-divider)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: istBTeil ? "1.4fr 42px 1.5fr 1.5fr" : "1.6fr 42px 1.6fr", padding: "6px 15px", fontSize: 9.5, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--color-neutral-600)", borderTop: "1px solid var(--color-divider)" }}>
             <div>Person</div>
             <div>Pos</div>
             <div>Knoten</div>
             {istBTeil && <div>B-Teil-Läufer</div>}
-            <div style={{ textAlign: "center" }}><i className="ph ph-drop-half" title="Wassergraben" /></div>
           </div>
           {A_TEIL_POSITIONEN.map((pos) => {
             const m = byPos.get(pos);
             const p = m ? personById.get(m.personId) : null;
             const hasKnoten = (KNOTEN_POSITIONEN as readonly string[]).includes(pos);
             const knoten = knotenByPos.get(`${gruppe.id}:${pos}`);
-            const hind = p ? hindByPerson.get(p.id) : null;
-            const h = hind ? HIND_MAP[hind.status] : null;
             return (
               <PositionRow key={pos} gruppeId={gruppe.id} pos={pos} istBTeil={istBTeil} belegt={!!m}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
@@ -720,7 +691,6 @@ function GruppeCard({
                     )}
                   </div>
                 )}
-                <div style={{ textAlign: "center" }}>{h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 15 }} title={h.title} />}</div>
               </PositionRow>
             );
           })}
@@ -748,7 +718,6 @@ function GruppeCard({
                 p={p}
                 from={gruppe.id}
                 doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
-                hind={hindByPerson.get(p.id)}
                 onRemove={() => onRemoveMember(m.id)}
               />
             ) : null;
@@ -797,7 +766,7 @@ function PositionRow({ gruppeId, pos, istBTeil, belegt, children }: { gruppeId: 
       ref={setNodeRef}
       style={{
         display: "grid",
-        gridTemplateColumns: istBTeil ? "1.4fr 42px 1.5fr 1.5fr 30px" : "1.6fr 42px 1.6fr 30px",
+        gridTemplateColumns: istBTeil ? "1.4fr 42px 1.5fr 1.5fr" : "1.6fr 42px 1.6fr",
         alignItems: "center", padding: "7px 15px", borderTop: "1px solid var(--color-divider)",
         background: aktiv ? "color-mix(in srgb,var(--color-accent) 12%,transparent)" : "transparent",
         boxShadow: aktiv ? "inset 0 0 0 1.5px var(--color-accent)" : undefined,
@@ -809,12 +778,11 @@ function PositionRow({ gruppeId, pos, istBTeil, belegt, children }: { gruppeId: 
   );
 }
 
-function MemberRow({ index, m, p, from, doppel, hind, onRemove }: { index: number; m: Gruppenmitglied; p: Person; from: number; doppel: boolean; hind?: HindernisFaehigkeit; onRemove: () => void }) {
+function MemberRow({ index, m, p, from, doppel, onRemove }: { index: number; m: Gruppenmitglied; p: Person; from: number; doppel: boolean; onRemove: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `member-${m.id}`,
     data: { personId: p.id, from },
   });
-  const h = hind ? HIND_MAP[hind.status] : null;
   return (
     <div
       style={{
@@ -837,7 +805,6 @@ function MemberRow({ index, m, p, from, doppel, hind, onRemove }: { index: numbe
         <span style={{ minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(p)}</span>
       </span>
       {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 6px", flex: "none" }}>2×</span>}
-      {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 15, flex: "none" }} title={h.title} />}
       <button onClick={onRemove} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-600)", padding: 2, flex: "none" }} aria-label="Entfernen">
         <i className="ph ph-x" style={{ fontSize: 14 }} />
       </button>

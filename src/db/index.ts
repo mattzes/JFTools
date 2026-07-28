@@ -106,6 +106,16 @@ CREATE TABLE IF NOT EXISTS messungen (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS training_eintraege (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id INTEGER NOT NULL REFERENCES personen(id) ON DELETE CASCADE,
+  kategorie TEXT NOT NULL,
+  notiz TEXT,
+  wert TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS training_person_kat ON training_eintraege(person_id, kategorie);
 CREATE TABLE IF NOT EXISTS hindernis_faehigkeiten (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   person_id INTEGER NOT NULL REFERENCES personen(id) ON DELETE CASCADE,
@@ -172,6 +182,16 @@ function migrate(sqlite: Database.Database) {
       );
     }
   }
+
+  // Training-Disziplinen auf die feste Menge abgleichen: fehlende einfügen, überzählige
+  // (dynamische Alt-Disziplinen) samt ihrer Messungen entfernen. Idempotent.
+  const existingDis = sqlite.prepare("SELECT id, name FROM disziplinen").all() as { id: number; name: string }[];
+  const existingNames = new Set(existingDis.map((d) => d.name));
+  const insDis = sqlite.prepare("INSERT INTO disziplinen (name) VALUES (?)");
+  for (const name of DISZIPLINEN_SEED) if (!existingNames.has(name)) insDis.run(name);
+  const fixedSet = new Set<string>(DISZIPLINEN_SEED);
+  const delDis = sqlite.prepare("DELETE FROM disziplinen WHERE id = ?");
+  for (const d of existingDis) if (!fixedSet.has(d.name)) delDis.run(d.id); // ON DELETE CASCADE räumt messungen mit
 }
 
 function init() {

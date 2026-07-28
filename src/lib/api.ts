@@ -106,13 +106,12 @@ export type Messung = {
   wertText: string | null;
   notiz: string | null;
 };
-export type HindernisFaehigkeit = {
+export type TrainingEintrag = {
   id: number;
   personId: number;
-  hindernis: string;
-  material: "ohne" | "verteiler" | "schlauchpaket";
-  status: "ja" | "nein" | "unsicher";
+  kategorie: string;
   notiz: string | null;
+  wert: string | null;
 };
 
 export type Planung = {

@@ -146,5 +146,12 @@ export const hindernisFaehigkeitSchema = z.object({
   notiz: z.string().nullish(),
 });
 
+export const trainingEintragSchema = z.object({
+  personId: z.number().int(),
+  kategorie: z.string().min(1, "Kategorie fehlt"),
+  notiz: z.string().nullish(),
+  wert: z.string().nullish(),
+});
+
 export type PersonInput = z.infer<typeof personSchema>;
 export type TerminInput = z.infer<typeof terminSchema>;
