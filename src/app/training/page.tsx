@@ -75,24 +75,24 @@ export default function TrainingPage() {
 
   return (
     <>
-      <PageHeader title="Training" sub={kat.label} />
-
-      {/* Feste Kategorie-Umschaltung (segmentiert wie Matrix/Liste bei Terminen) */}
-      <div style={{ padding: "14px 18px 6px", overflowX: "auto" }} className="lg:px-6">
-        <div className="seg" style={{ fontSize: 12 }}>
-          {TRAINING_KATEGORIEN.map((k) => (
-            <button
-              key={k.key}
-              className="seg-opt"
-              data-on={k.key === kat.key}
-              onClick={() => setAktiveKey(k.key)}
-              style={{ whiteSpace: "nowrap" }}
-            >
-              {k.label}
-            </button>
-          ))}
+      {/* Kategorie-Umschaltung in der Kopfzeile (segmentiert wie Matrix/Liste bei Terminen) */}
+      <PageHeader title="Training">
+        <div style={{ overflowX: "auto", maxWidth: "100%" }}>
+          <div className="seg" style={{ fontSize: 12 }}>
+            {TRAINING_KATEGORIEN.map((k) => (
+              <button
+                key={k.key}
+                className="seg-opt"
+                data-on={k.key === kat.key}
+                onClick={() => setAktiveKey(k.key)}
+                style={{ whiteSpace: "nowrap" }}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </PageHeader>
 
       {jugendliche.length === 0 ? (
         <Empty icon="ph-users-three" text="Keine aktiven Jugendlichen" hint="Lege unter Personen aktive Jugendliche an." />
