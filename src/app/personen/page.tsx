@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { api, useApi, Person, personName } from "@/lib/api";
 import { DatePicker, Dialog, Empty, PageHeader, Spinner, Th, fmtDate, useSort, sortRows } from "@/components/ui";
 import { alter, alterInDiesemJahr, leistungsspangeVorschlag, jugendflamme1Vorschlag, jugendflamme2Vorschlag, geburtsdatumPlausibel } from "@/lib/domain/alter";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 type FormState = {
   id?: number;
@@ -49,6 +50,7 @@ function personSortVal(p: Person, key: string) {
 }
 
 export default function PersonenPage() {
+  const confirm = useConfirm();
   const { data: personen, reload } = useApi<Person[]>("/personen");
   const [suche, setSuche] = useState("");
   const [selId, setSelId] = useState<number | null>(null);
@@ -367,6 +369,25 @@ export default function PersonenPage() {
                 }}
               >
                 <i className={`ph ${sel.aktiv ? "ph-archive" : "ph-arrow-counter-clockwise"}`} />
+              </button>
+              <button
+                className="btn btn-danger"
+                title="Endgültig löschen (inkl. Verfügbarkeiten, Gruppen, Trainingsdaten)"
+                onClick={async () => {
+                  if (
+                    !(await confirm({
+                      title: "Person löschen",
+                      message: `${personName(sel)} endgültig löschen? Alle zugehörigen Daten (Verfügbarkeiten, Gruppen-Zuordnungen, Trainingszeiten, Rückmeldungen) werden mitgelöscht. Zum reinen Ausblenden lieber „Deaktivieren“ nutzen.`,
+                      confirmLabel: "Löschen",
+                    }))
+                  )
+                    return;
+                  await api(`/personen/${sel.id}`, { method: "DELETE" });
+                  setSelId(null);
+                  reload();
+                }}
+              >
+                <i className="ph ph-trash" />
               </button>
             </div>
           </div>
