@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/", icon: "ph-house", label: "Übersicht", key: "dashboard" },
@@ -28,6 +29,7 @@ function isActive(pathname: string, href: string) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div className="flex h-dvh overflow-hidden">
@@ -35,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav
         className="hidden lg:flex"
         style={{
-          width: 216,
+          width: collapsed ? 64 : 216,
           flex: "none",
           height: "100%",
           flexDirection: "column",
@@ -43,22 +45,45 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           borderRight: "1px solid var(--color-divider)",
           padding: "16px 12px",
           gap: 2,
+          transition: "width 0.18s ease",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 8px 16px" }}>
-          <span
+        <div
+          style={{
+            display: "flex", alignItems: "center",
+            justifyContent: collapsed ? "center" : "space-between",
+            gap: 9, padding: "6px 8px 16px",
+          }}
+        >
+          {!collapsed && (
+            <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+              <span
+                style={{
+                  width: 30, height: 30, flex: "none", borderRadius: 8, display: "grid",
+                  placeItems: "center", background: "linear-gradient(150deg,#9184d9,#5d5294)",
+                  color: "#fff", fontSize: 17,
+                }}
+              >
+                <i className="ph ph-flame" />
+              </span>
+              <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
+                <b style={{ fontSize: 14, fontWeight: 600 }}>JF Verwaltung</b>
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            aria-label={collapsed ? "Menü ausklappen" : "Menü einklappen"}
+            title={collapsed ? "Menü ausklappen" : "Menü einklappen"}
             style={{
-              width: 30, height: 30, flex: "none", borderRadius: 8, display: "grid",
-              placeItems: "center", background: "linear-gradient(150deg,#9184d9,#5d5294)",
-              color: "#fff", fontSize: 17,
+              flex: "none", width: 30, height: 30, borderRadius: 7, border: "none",
+              display: "grid", placeItems: "center", cursor: "pointer",
+              background: "transparent", color: "var(--color-neutral-500)", fontSize: 16,
             }}
           >
-            <i className="ph ph-flame" />
-          </span>
-          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
-            <b style={{ fontSize: 14, fontWeight: 600 }}>JF Rottorf</b>
-            <span style={{ fontSize: 10.5, color: "var(--color-neutral-500)" }}>Verwaltung</span>
-          </span>
+            <i className={`ph ${collapsed ? "ph-caret-right" : "ph-caret-left"}`} />
+          </button>
         </div>
         {NAV_ITEMS.map((it) => {
           const on = isActive(pathname, it.href);
@@ -67,8 +92,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               key={it.key}
               href={it.href}
               aria-current={on ? "page" : undefined}
+              title={collapsed ? it.label : undefined}
               style={{
                 display: "flex", alignItems: "center", gap: 11, padding: "9px 11px",
+                justifyContent: collapsed ? "center" : "flex-start",
                 borderRadius: 8, fontSize: 13, textDecoration: "none",
                 ...(on
                   ? { background: "color-mix(in srgb,var(--color-accent) 16%,transparent)", color: "var(--color-accent-200)", fontWeight: 600 }
@@ -76,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }}
             >
               <i className={`ph ${it.icon}`} style={{ fontSize: 18 }} />
-              <span>{it.label}</span>
+              {!collapsed && <span>{it.label}</span>}
             </Link>
           );
         })}
@@ -84,13 +111,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <a
             href="/api/v1/backup"
             download
+            title={collapsed ? "Backup" : undefined}
             style={{
               display: "flex", alignItems: "center", gap: 11, padding: "9px 11px",
+              justifyContent: collapsed ? "center" : "flex-start",
               borderRadius: 8, fontSize: 13, color: "var(--color-neutral-300)", textDecoration: "none",
             }}
           >
             <i className="ph ph-download-simple" style={{ fontSize: 18 }} />
-            <span>JSON-Backup</span>
+            {!collapsed && <span>Backup</span>}
           </a>
         </div>
       </nav>

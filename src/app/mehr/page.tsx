@@ -54,7 +54,7 @@ export default function MehrPage() {
             <i className="ph ph-download-simple" />
           </span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 500 }}>JSON-Backup exportieren</div>
+            <div style={{ fontSize: 14, fontWeight: 500 }}>Backup exportieren</div>
             <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)" }}>Kompletter Datenbestand als Datei</div>
           </div>
         </a>
