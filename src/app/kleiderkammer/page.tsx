@@ -257,7 +257,7 @@ export default function KleiderkammerPage() {
           </button>
           <button type="button" className="seg-opt" data-on={modus === "ausgabe"} onClick={() => setModus("ausgabe")}>
             <i className="ph ph-user-list" />
-            Ausgabe je Person
+            Ausgabe
           </button>
         </div>
         {modus === "bestand" && (
@@ -650,9 +650,6 @@ function BestandAnsicht({
                 <span>
                   <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <b style={{ fontSize: 14.5 }}>{s.name}</b>
-                    {s.mitGroessen && (
-                      <span className="ph-tag" style={{ background: "var(--color-neutral-800)", color: "var(--color-neutral-300)" }}>nach Größen</span>
-                    )}
                   </span>
                   <span style={{ fontSize: 11.5, color: "var(--color-neutral-500)" }}>
                     {gesamt} gesamt · {ausgegeben} ausgegeben · {gesamt - ausgegeben} verfügbar
