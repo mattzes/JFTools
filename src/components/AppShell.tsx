@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { href: "/", icon: "ph-house", label: "Übersicht", key: "dashboard" },
   { href: "/personen", icon: "ph-users-three", label: "Personen", key: "personen" },
   { href: "/termine", icon: "ph-calendar-dots", label: "Termine", key: "termine" },
-  { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Rückmeldungen", key: "rueck" },
+  { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Checkliste", key: "rueck" },
   { href: "/abzeichen", icon: "ph-medal", label: "Abzeichen", key: "abzeichen" },
   { href: "/wettbewerbe", icon: "ph-trophy", label: "Wettbewerbe", key: "wettbewerb" },
   { href: "/training", icon: "ph-timer", label: "Training", key: "training" },

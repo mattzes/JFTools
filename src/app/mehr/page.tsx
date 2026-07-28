@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmProvider";
 
 const LINKS = [
-  { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Rückmeldungen", sub: "Zettel & Einverständnis" },
+  { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Checkliste", sub: "Zettel & Einverständnis" },
   { href: "/abzeichen", icon: "ph-medal", label: "Abzeichen", sub: "Fälligkeit nach Jahr" },
   { href: "/training", icon: "ph-timer", label: "Training", sub: "Zeiten & Auswertung" },
   { href: "/kleiderkammer", icon: "ph-t-shirt", label: "Kleiderkammer", sub: "Bestand & Ausgabe" },

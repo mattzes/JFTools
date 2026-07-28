@@ -88,7 +88,7 @@ export default function RueckmeldungenPage() {
 
   return (
     <>
-      <PageHeader title="Rückmeldungen" sub="Zettel & Einverständnis — wem fehlt noch was?">
+      <PageHeader title="Checkliste" sub="Zettel & Einverständnis — wem fehlt noch was?">
         <button
           className={`hidden lg:inline-flex btn ${editMode ? "btn-primary" : "btn-secondary"}`}
           onClick={() => setEditMode((v) => !v)}
@@ -98,7 +98,7 @@ export default function RueckmeldungenPage() {
         </button>
         <button className="btn btn-secondary" onClick={() => setNeuerTyp({ name: "", zielgruppe: "alle" })}>
           <i className="ph ph-plus" />
-          Rückmeldung hinzufügen
+          Checkliste hinzufügen
         </button>
       </PageHeader>
 
@@ -220,7 +220,7 @@ export default function RueckmeldungenPage() {
       )}
 
       {neuerTyp !== null && (
-        <Dialog title="Rückmeldung hinzufügen" onClose={() => setNeuerTyp(null)}>
+        <Dialog title="Checkliste hinzufügen" onClose={() => setNeuerTyp(null)}>
           <div className="field">
             <label>Name</label>
             <input className="input" autoFocus placeholder="z. B. Gesundheitsbogen Zeltlager" value={neuerTyp.name} onChange={(e) => setNeuerTyp({ ...neuerTyp, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addTyp()} />
