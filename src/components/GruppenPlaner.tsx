@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -13,10 +12,20 @@ import {
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
-import { api, Person, Planung, HindernisFaehigkeit, Gruppe, Gruppenmitglied, personName } from "@/lib/api";
-import { ModeTag, PageHeader } from "@/components/ui";
+import { api, Person, Planung, HindernisFaehigkeit, Gruppe, Gruppenmitglied, Termin, Verfuegbarkeit, personName } from "@/lib/api";
+import { ModeTag, PageHeader, fmtDateShort } from "@/components/ui";
 import { A_TEIL_POSITIONEN, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN } from "@/lib/domain/constants";
 import { gruppenAlter, sollZeitLabel, gruppenWarnungen } from "@/lib/domain/planung";
+import { alter, alterInDiesemJahr } from "@/lib/domain/alter";
+
+// Welche Zusatzinfos in der Starterliste angezeigt werden
+type StarterInfo = { alter: boolean; jgAlter: boolean; termine: number[] };
+
+const VERF_STYLE = {
+  ja: { icon: "ph-check", c: "var(--color-accent-300)" },
+  nein: { icon: "ph-x", c: "var(--danger)" },
+  offen: { icon: "ph-minus", c: "var(--color-neutral-500)" },
+} as const;
 
 const HIND_MAP = {
   ja: { icon: "ph-check-circle", c: "var(--color-accent-300)", title: "Wassergraben ok" },
@@ -28,11 +37,15 @@ export function GruppenPlaner({
   personen,
   planung,
   hindernisse,
+  termine,
+  alleVerf,
   reload,
 }: {
   personen: Person[];
   planung: Planung;
   hindernisse: HindernisFaehigkeit[];
+  termine: Termin[];
+  alleVerf: Verfuegbarkeit[];
   reload: () => void;
 }) {
   const { termin } = planung;
@@ -45,6 +58,20 @@ export function GruppenPlaner({
   const [busy, setBusy] = useState(false);
   const [pendingAssigned, setPendingAssigned] = useState<Set<number>>(new Set());
   const markPending = (id: number) => setPendingAssigned((prev) => new Set(prev).add(id));
+  const [info, setInfo] = useState<StarterInfo>({ alter: false, jgAlter: false, termine: [] });
+
+  // Andere Termine (nicht der aktuelle) für die Anwesenheits-Auswahl
+  const andereTermine = useMemo(
+    () => termine.filter((t) => t.id !== termin.id).sort((a, b) => a.datumVon.localeCompare(b.datumVon)),
+    [termine, termin.id],
+  );
+  // Verfügbarkeits-Status je Person & Termin
+  const verfByPT = useMemo(() => {
+    const m = new Map<string, Verfuegbarkeit["status"]>();
+    alleVerf.forEach((v) => m.set(`${v.personId}:${v.terminId}`, v.status));
+    return m;
+  }, [alleVerf]);
+  const infoTermine = useMemo(() => andereTermine.filter((t) => info.termine.includes(t.id)), [andereTermine, info.termine]);
 
   const personById = useMemo(() => new Map(personen.map((p) => [p.id, p])), [personen]);
   const hindByPerson = useMemo(() => new Map(hindernisse.map((h) => [h.personId, h])), [hindernisse]);
@@ -196,6 +223,7 @@ export function GruppenPlaner({
         sub={`${starter.length} Starter · ${planung.gruppen.length} ${planung.gruppen.length === 1 ? "Gruppe" : "Gruppen"}`}
       >
         <ModeTag modus={modus} />
+        <AnzeigeMenu info={info} setInfo={setInfo} termine={andereTermine} />
         <button
           className="btn btn-secondary"
           onClick={toggleDoppelstart}
@@ -228,6 +256,9 @@ export function GruppenPlaner({
             hindByPerson={hindByPerson}
             gruppenCountByPerson={gruppenCountByPerson}
             istZugewiesen={istZugewiesen}
+            info={info}
+            infoTermine={infoTermine}
+            verfByPT={verfByPT}
           />
 
           {/* Gruppen */}
@@ -294,12 +325,18 @@ function StarterPool({
   hindByPerson,
   gruppenCountByPerson,
   istZugewiesen,
+  info,
+  infoTermine,
+  verfByPT,
 }: {
   starter: Person[];
   doppelstart: boolean;
   hindByPerson: Map<number, HindernisFaehigkeit>;
   gruppenCountByPerson: Map<number, number>;
   istZugewiesen: (id: number) => boolean;
+  info: StarterInfo;
+  infoTermine: Termin[];
+  verfByPT: Map<string, Verfuegbarkeit["status"]>;
 }) {
   return (
     <div
@@ -318,21 +355,38 @@ function StarterPool({
             Noch keine Zusagen. In <b>Termine</b> Verfügbarkeit auf „Ja" setzen.
           </div>
         )}
-        {starter.map((p) => (
-          <StarterChip
-            key={p.id}
-            person={p}
-            hind={hindByPerson.get(p.id)}
-            doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
-            zugewiesen={istZugewiesen(p.id)}
-          />
-        ))}
+        {starter.map((p) => {
+          const meta: React.ReactNode[] = [];
+          if (info.alter && p.geburtsdatum) meta.push(<InfoTag key="a" title="Alter">{alter(p.geburtsdatum)} J</InfoTag>);
+          if (info.jgAlter && p.geburtsdatum) meta.push(<InfoTag key="j" title="Jahrgangsalter">Jg {alterInDiesemJahr(p.geburtsdatum)}</InfoTag>);
+          for (const t of infoTermine) {
+            const st = verfByPT.get(`${p.id}:${t.id}`) ?? "offen";
+            const s = VERF_STYLE[st];
+            const d = fmtDateShort(t.datumVon);
+            meta.push(
+              <InfoTag key={`t${t.id}`} title={`${t.titel}: ${st}`}>
+                <i className={`ph-bold ${s.icon}`} style={{ color: s.c, fontSize: 10 }} />
+                {d.tag}. {d.mon}
+              </InfoTag>,
+            );
+          }
+          return (
+            <StarterChip
+              key={p.id}
+              person={p}
+              hind={hindByPerson.get(p.id)}
+              doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
+              zugewiesen={istZugewiesen(p.id)}
+              meta={meta.length ? meta : null}
+            />
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function StarterChip({ person, hind, doppel, zugewiesen }: { person: Person; hind?: HindernisFaehigkeit; doppel: boolean; zugewiesen: boolean }) {
+function StarterChip({ person, hind, doppel, zugewiesen, meta }: { person: Person; hind?: HindernisFaehigkeit; doppel: boolean; zugewiesen: boolean; meta?: React.ReactNode[] | null }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `pool-${person.id}`,
     data: { personId: person.id, from: "pool" },
@@ -346,16 +400,107 @@ function StarterChip({ person, hind, doppel, zugewiesen }: { person: Person; hin
       {...attributes}
       title={!zugewiesen ? "noch keiner Gruppe zugewiesen" : undefined}
       style={{
-        display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: 9,
+        display: "flex", flexDirection: "column", gap: 5, padding: "7px 9px", borderRadius: 9,
         background: !zugewiesen ? "color-mix(in srgb, var(--warn) 10%, var(--color-bg))" : "var(--color-bg)",
         border: `1px solid ${borderColor}`,
         cursor: "grab", opacity: isDragging ? 0.4 : 1, touchAction: "none",
       }}
     >
-      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(person)}</div>
-      {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 5px" }}>2×</span>}
-      {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 14 }} title={h.title} />}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(person)}</div>
+        {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 5px" }}>2×</span>}
+        {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 14 }} title={h.title} />}
+      </div>
+      {meta && <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{meta}</div>}
     </div>
+  );
+}
+
+function InfoTag({ children, title }: { children: React.ReactNode; title?: string }) {
+  return (
+    <span
+      title={title}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 500,
+        background: "var(--color-neutral-800)", color: "var(--color-neutral-300)",
+        borderRadius: 5, padding: "1px 5px", whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function AnzeigeMenu({ info, setInfo, termine }: { info: StarterInfo; setInfo: (i: StarterInfo) => void; termine: Termin[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+  const anzahl = (info.alter ? 1 : 0) + (info.jgAlter ? 1 : 0) + info.termine.length;
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button className="btn btn-secondary" onClick={() => setOpen((o) => !o)} title="Zusatzinfos in der Starterliste">
+        <i className="ph ph-sliders-horizontal" style={{ fontSize: 16 }} />
+        Anzeige{anzahl ? ` · ${anzahl}` : ""}
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 60, width: 260,
+            background: "var(--color-surface)", border: "1px solid var(--color-divider)", borderRadius: 10,
+            boxShadow: "var(--shadow-md)", padding: "10px 6px", maxHeight: 360, overflowY: "auto",
+          }}
+        >
+          <MenuLabel>Pro Jugendlichem zeigen</MenuLabel>
+          <CheckRow checked={info.alter} onChange={(v) => setInfo({ ...info, alter: v })}>Alter</CheckRow>
+          <CheckRow checked={info.jgAlter} onChange={(v) => setInfo({ ...info, jgAlter: v })}>Jahrgangsalter</CheckRow>
+          {termine.length > 0 && <MenuLabel>Anwesenheit bei Termin</MenuLabel>}
+          {termine.map((t) => {
+            const d = fmtDateShort(t.datumVon);
+            return (
+              <CheckRow
+                key={t.id}
+                checked={info.termine.includes(t.id)}
+                onChange={(v) => setInfo({ ...info, termine: v ? [...info.termine, t.id] : info.termine.filter((x) => x !== t.id) })}
+              >
+                <span style={{ color: "var(--color-neutral-500)", fontVariantNumeric: "tabular-nums" }}>{d.tag}. {d.mon}</span>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.titel}</span>
+              </CheckRow>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 9.5, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--color-neutral-600)", padding: "8px 10px 4px" }}>
+      {children}
+    </div>
+  );
+}
+
+function CheckRow({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
+  return (
+    <label
+      style={{
+        display: "flex", alignItems: "center", gap: 9, padding: "6px 10px", borderRadius: 7,
+        cursor: "pointer", fontSize: 12.5, minWidth: 0,
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-bg)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+    >
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ flex: "none" }} />
+      {children}
+    </label>
   );
 }
 
