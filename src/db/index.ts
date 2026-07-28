@@ -127,6 +127,33 @@ CREATE TABLE IF NOT EXISTS hindernis_faehigkeiten (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS hind_person ON hindernis_faehigkeiten(person_id, hindernis);
+CREATE TABLE IF NOT EXISTS kleidungsstuecke (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  mit_groessen INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS kleidung_bestand (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kleidungsstueck_id INTEGER NOT NULL REFERENCES kleidungsstuecke(id) ON DELETE CASCADE,
+  groesse TEXT,
+  menge INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS bestand_stueck_groesse ON kleidung_bestand(kleidungsstueck_id, groesse);
+CREATE TABLE IF NOT EXISTS kleidung_ausgaben (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id INTEGER NOT NULL REFERENCES personen(id) ON DELETE CASCADE,
+  kleidungsstueck_id INTEGER NOT NULL REFERENCES kleidungsstuecke(id) ON DELETE CASCADE,
+  groesse TEXT,
+  menge INTEGER NOT NULL DEFAULT 1,
+  ausgegeben_am TEXT,
+  notiz TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 // Termine 2026 aus der Spec als Seed

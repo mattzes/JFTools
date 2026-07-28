@@ -122,6 +122,23 @@ export type Planung = {
   verfuegbarkeiten: Verfuegbarkeit[];
 };
 
+export type Kleidungsstueck = { id: number; name: string; mitGroessen: boolean };
+export type KleidungBestand = {
+  id: number;
+  kleidungsstueckId: number;
+  groesse: string | null;
+  menge: number;
+};
+export type KleidungAusgabe = {
+  id: number;
+  personId: number;
+  kleidungsstueckId: number;
+  groesse: string | null;
+  menge: number;
+  ausgegebenAm: string | null;
+  notiz: string | null;
+};
+
 export function personName(p: Person): string {
   return `${p.vorname} ${p.nachname}`;
 }

@@ -181,6 +181,46 @@ export const trainingEintraege = sqliteTable(
   (t) => [uniqueIndex("training_person_kat").on(t.personId, t.kategorie)],
 );
 
+// ── Kleiderkammer ──
+// Art des Kleidungsstücks; mitGroessen entscheidet über die Bestand-Auflösung
+export const kleidungsstuecke = sqliteTable("kleidungsstuecke", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  mitGroessen: integer("mit_groessen", { mode: "boolean" }).notNull().default(false),
+  ...timestamps,
+});
+
+// Gesamtbestand je Größe; bei mitGroessen=false genau eine Zeile mit groesse=NULL
+export const kleidungBestand = sqliteTable(
+  "kleidung_bestand",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    kleidungsstueckId: integer("kleidungsstueck_id")
+      .notNull()
+      .references(() => kleidungsstuecke.id, { onDelete: "cascade" }),
+    groesse: text("groesse"), // NULL = keine Größenunterteilung
+    menge: integer("menge").notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("bestand_stueck_groesse").on(t.kleidungsstueckId, t.groesse)],
+);
+
+// An eine Person ausgegebene Stücke (eine Zeile = aktuell in Besitz)
+export const kleidungAusgaben = sqliteTable("kleidung_ausgaben", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  personId: integer("person_id")
+    .notNull()
+    .references(() => personen.id, { onDelete: "cascade" }),
+  kleidungsstueckId: integer("kleidungsstueck_id")
+    .notNull()
+    .references(() => kleidungsstuecke.id, { onDelete: "cascade" }),
+  groesse: text("groesse"),
+  menge: integer("menge").notNull().default(1),
+  ausgegebenAm: text("ausgegeben_am"),
+  notiz: text("notiz"),
+  ...timestamps,
+});
+
 export const hindernisFaehigkeiten = sqliteTable(
   "hindernis_faehigkeiten",
   {

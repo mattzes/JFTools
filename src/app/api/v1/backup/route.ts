@@ -14,6 +14,9 @@ const TABLES = [
   "disziplinen",
   "messungen",
   "trainingEintraege",
+  "kleidungsstuecke",
+  "kleidungBestand",
+  "kleidungAusgaben",
 ] as const;
 
 const SQL_NAMES: Record<(typeof TABLES)[number], string> = {
@@ -28,6 +31,9 @@ const SQL_NAMES: Record<(typeof TABLES)[number], string> = {
   disziplinen: "disziplinen",
   messungen: "messungen",
   trainingEintraege: "training_eintraege",
+  kleidungsstuecke: "kleidungsstuecke",
+  kleidungBestand: "kleidung_bestand",
+  kleidungAusgaben: "kleidung_ausgaben",
 };
 
 // Export: kompletter Datenbestand als JSON-Datei

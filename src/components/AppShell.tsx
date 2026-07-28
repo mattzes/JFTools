@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/abzeichen", icon: "ph-medal", label: "Abzeichen", key: "abzeichen" },
   { href: "/wettbewerbe", icon: "ph-trophy", label: "Wettbewerbe", key: "wettbewerb" },
   { href: "/training", icon: "ph-timer", label: "Training", key: "training" },
+  { href: "/kleiderkammer", icon: "ph-t-shirt", label: "Kleiderkammer", key: "kleiderkammer" },
 ];
 
 // Mobil passen nicht alle 8 Bereiche in die Tab-Bar → Start · Personen · Termine · Planer · Mehr
@@ -21,7 +22,7 @@ const TAB_ITEMS = [
   { href: "/personen", icon: "ph-users-three", label: "Personen", match: ["/personen"] },
   { href: "/termine", icon: "ph-calendar-dots", label: "Termine", match: ["/termine"] },
   { href: "/wettbewerbe", icon: "ph-trophy", label: "Planer", match: ["/wettbewerbe"] },
-  { href: "/mehr", icon: "ph-dots-three-outline", label: "Mehr", match: ["/mehr", "/rueckmeldungen", "/abzeichen", "/training"] },
+  { href: "/mehr", icon: "ph-dots-three-outline", label: "Mehr", match: ["/mehr", "/rueckmeldungen", "/abzeichen", "/training", "/kleiderkammer"] },
 ];
 
 function isActive(pathname: string, href: string) {

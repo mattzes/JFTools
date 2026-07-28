@@ -153,5 +153,39 @@ export const trainingEintragSchema = z.object({
   wert: z.string().nullish(),
 });
 
+// ── Kleiderkammer ──
+export const kleidungsstueckSchema = z.object({
+  name: z.string().min(1, "Name fehlt"),
+  mitGroessen: z.boolean().default(false),
+  // Optionaler Startbestand beim Anlegen: bei mitGroessen Zeilen je Größe,
+  // sonst eine Gesamtmenge (groesse bleibt dann leer/null).
+  bestand: z
+    .array(z.object({ groesse: z.string().nullish(), menge: z.number().int().min(0) }))
+    .optional(),
+});
+
+export const kleidungsstueckUpdateSchema = z.object({
+  name: z.string().min(1, "Name fehlt"),
+});
+
+export const kleidungBestandSchema = z.object({
+  kleidungsstueckId: z.number().int(),
+  groesse: z.string().nullish(),
+  menge: z.number().int().min(0),
+});
+
+export const kleidungAusgabeSchema = z.object({
+  personId: z.number().int(),
+  kleidungsstueckId: z.number().int(),
+  groesse: z.string().nullish(),
+  menge: z.number().int().min(1),
+  ausgegebenAm: isoDate.nullish(),
+  notiz: z.string().nullish(),
+});
+
+export const kleidungAusgabeUpdateSchema = z.object({
+  menge: z.number().int().min(1),
+});
+
 export type PersonInput = z.infer<typeof personSchema>;
 export type TerminInput = z.infer<typeof terminSchema>;
