@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { DatePicker, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { useStoredState } from "@/lib/useStoredState";
 
 type Modus = "bestand" | "ausgabe";
 
@@ -49,7 +50,8 @@ export default function KleiderkammerPage() {
   const { data: bestand, reload: reloadBestand } = useApi<KleidungBestand[]>("/kleidung-bestand");
   const { data: ausgaben, reload: reloadAusgaben } = useApi<KleidungAusgabe[]>("/kleidung-ausgaben");
 
-  const [modus, setModus] = useState<Modus>("bestand");
+  const [modusRaw, setModus] = useStoredState("kleiderkammer.modus", "bestand");
+  const modus = modusRaw as Modus;
   const [neuStueck, setNeuStueck] = useState<NeuStueck | null>(null);
   const [renameForm, setRenameForm] = useState<{ id: number; name: string } | null>(null);
   const [bestandForm, setBestandForm] = useState<BestandForm | null>(null);
