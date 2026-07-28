@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, personName } from "@/lib/api";
-import { DatePicker, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
+import { DatePicker, Dialog, Empty, PageHeader, Spinner, Th, fmtDate, useSort, sortRows } from "@/components/ui";
 import { alter, alterInDiesemJahr, leistungsspangeVorschlag, jugendflamme1Vorschlag, jugendflamme2Vorschlag, geburtsdatumPlausibel } from "@/lib/domain/alter";
 
 type FormState = {
@@ -30,6 +30,24 @@ const EMPTY_FORM: FormState = {
   jugendflamme1: "", jugendflamme2: "", leistungsspangeDatum: "", aktiv: true,
 };
 
+const jahrOf = (iso: string | null) => (iso ? Number(iso.slice(0, 4)) : null);
+
+// Sortier-Werte je Spalte (Abzeichen: Abnahme-Jahr bzw. Vorschlagsjahr)
+function personSortVal(p: Person, key: string) {
+  switch (key) {
+    case "name": return `${p.nachname} ${p.vorname}`;
+    case "geb": return p.geburtsdatum;
+    case "ein": return p.eintrittsdatum;
+    case "ausweis": return p.ausweisnr;
+    case "jgalter": return p.geburtsdatum ? alterInDiesemJahr(p.geburtsdatum) : null;
+    case "alter": return p.geburtsdatum ? alter(p.geburtsdatum) : null;
+    case "jfl1": return p.jugendflamme1 ? jahrOf(p.jugendflamme1) : p.eintrittsdatum ? jugendflamme1Vorschlag(p.eintrittsdatum) : null;
+    case "jfl2": return p.jugendflamme2 ? jahrOf(p.jugendflamme2) : jugendflamme2Vorschlag(p.geburtsdatum, p.jugendflamme1);
+    case "lsp": return p.leistungsspangeDatum ? jahrOf(p.leistungsspangeDatum) : p.geburtsdatum ? leistungsspangeVorschlag(p.geburtsdatum) : null;
+    default: return null;
+  }
+}
+
 export default function PersonenPage() {
   const { data: personen, reload } = useApi<Person[]>("/personen");
   const [suche, setSuche] = useState("");
@@ -37,15 +55,17 @@ export default function PersonenPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [zeigeInaktive, setZeigeInaktive] = useState(false);
+  const { sort, toggle } = useSort();
 
   const liste = useMemo(() => {
     if (!personen) return [];
     const q = suche.toLowerCase();
-    return personen
+    const gefiltert = personen
       .filter((p) => (zeigeInaktive ? true : p.aktiv))
       .filter((p) => !q || personName(p).toLowerCase().includes(q) || (p.ausweisnr ?? "").includes(q))
       .sort((a, b) => (a.rolle === b.rolle ? a.nachname.localeCompare(b.nachname) : a.rolle === "jugendlich" ? -1 : 1));
-  }, [personen, suche, zeigeInaktive]);
+    return sortRows(gefiltert, sort, personSortVal);
+  }, [personen, suche, zeigeInaktive, sort]);
 
   if (!personen) return <Spinner />;
 
@@ -144,15 +164,15 @@ export default function PersonenPage() {
               <table className="table hidden lg:table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Geburtsdatum</th>
-                    <th>Eintrittsdatum</th>
-                    <th>Ausweis-Nr.</th>
-                    <th style={{ textAlign: "center" }}>Jahrg.-Alter</th>
-                    <th style={{ textAlign: "center" }}>Aktuelles Alter</th>
-                    <th>JFL1</th>
-                    <th>JFL2</th>
-                    <th>LSP</th>
+                    <Th sortKey="name" sort={sort} onSort={toggle}>Name</Th>
+                    <Th sortKey="geb" sort={sort} onSort={toggle}>Geburtsdatum</Th>
+                    <Th sortKey="ein" sort={sort} onSort={toggle}>Eintrittsdatum</Th>
+                    <Th sortKey="ausweis" sort={sort} onSort={toggle}>Ausweis-Nr.</Th>
+                    <Th sortKey="jgalter" sort={sort} onSort={toggle} align="center">Jahrg.-Alter</Th>
+                    <Th sortKey="alter" sort={sort} onSort={toggle} align="center">Aktuelles Alter</Th>
+                    <Th sortKey="jfl1" sort={sort} onSort={toggle}>JFL1</Th>
+                    <Th sortKey="jfl2" sort={sort} onSort={toggle}>JFL2</Th>
+                    <Th sortKey="lsp" sort={sort} onSort={toggle}>LSP</Th>
                   </tr>
                 </thead>
                 <tbody>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { api, useApi, Person, personName } from "@/lib/api";
-import { PageHeader, Spinner, Empty, Dialog, DatePicker, fmtDate } from "@/components/ui";
+import { PageHeader, Spinner, Empty, Dialog, DatePicker, Th, fmtDate, useSort, sortRows } from "@/components/ui";
 import { abzeichenVorschlag, alter, alterInDiesemJahr } from "@/lib/domain/alter";
 
 const BADGES = [
@@ -43,13 +43,22 @@ const doneStyle: React.CSSProperties = { display: "inline-flex", alignItems: "ce
 export default function AbzeichenPage() {
   const { data: personen, reload } = useApi<Person[]>("/personen");
   const [selId, setSelId] = useState<number | null>(null);
+  const { sort, toggle } = useSort();
 
   if (!personen) return <Spinner />;
 
   const jahr = new Date().getFullYear();
-  const jugend = personen
+  const jugendBasis = personen
     .filter((p) => p.aktiv && p.rolle === "jugendlich")
     .sort((a, b) => personName(a).localeCompare(personName(b), "de"));
+  const jugend = sortRows(jugendBasis, sort, (p, key) => {
+    if (key === "name") return `${p.nachname} ${p.vorname}`;
+    const b = BADGES.find((x) => x.id === key);
+    if (!b) return null;
+    const datum = p[b.dateKey];
+    if (datum) return jahrOf(datum);
+    return p[b.planKey] ?? abzeichenVorschlag(p, b.id);
+  });
   const sel = selId != null ? personen.find((p) => p.id === selId) ?? null : null;
 
   async function patchPerson(id: number, body: Record<string, unknown>) {
@@ -106,9 +115,9 @@ export default function AbzeichenPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th style={{ minWidth: 160 }}>Name</th>
+                  <Th sortKey="name" sort={sort} onSort={toggle} style={{ minWidth: 160 }}>Name</Th>
                   {BADGES.map((b) => (
-                    <th key={b.id} style={{ textAlign: "center", minWidth: 150 }}>{b.label}</th>
+                    <Th key={b.id} sortKey={b.id} sort={sort} onSort={toggle} align="center" style={{ minWidth: 150 }}>{b.label}</Th>
                   ))}
                 </tr>
               </thead>

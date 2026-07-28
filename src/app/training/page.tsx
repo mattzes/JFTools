@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, Disziplin, Messung, personName } from "@/lib/api";
-import { DatePicker, Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
+import { DatePicker, Dialog, Empty, PageHeader, Spinner, Th, useSort, sortRows } from "@/components/ui";
 
 export default function TrainingPage() {
   const { data: personen } = useApi<Person[]>("/personen");
@@ -11,6 +11,7 @@ export default function TrainingPage() {
   const [aktiveDisId, setAktiveDisId] = useState<number | null>(null);
   const [neueDis, setNeueDis] = useState<string | null>(null);
   const [erfassen, setErfassen] = useState(false);
+  const { sort, toggle } = useSort();
 
   const disId = aktiveDisId ?? disziplinen?.[0]?.id ?? null;
 
@@ -32,12 +33,23 @@ export default function TrainingPage() {
       const lastNote = [...sorted].reverse().find((m) => m.notiz)?.notiz ?? "—";
       return { personId, best, last, werte, note: lastNote };
     });
-    return out.sort((a, b) => a.best - b.best);
+    out.sort((a, b) => a.best - b.best);
+    return out.map((r, i) => ({ ...r, rank: i + 1 })); // Rang nach Bestzeit (bleibt beim Umsortieren erhalten)
   }, [messungen, disId]);
 
   if (!personen || !disziplinen || !messungen) return <Spinner />;
 
   const aktiveDis = disziplinen.find((d) => d.id === disId);
+  const sortedRows = sortRows(rows, sort, (r, key) => {
+    switch (key) {
+      case "rang": return r.rank;
+      case "person": { const p = personById.get(r.personId); return p ? `${p.nachname} ${p.vorname}` : ""; }
+      case "best": return r.best;
+      case "letzte": return r.last;
+      case "notiz": return r.note === "—" ? null : r.note;
+      default: return null;
+    }
+  });
 
   async function addDis() {
     if (!neueDis?.trim()) return;
@@ -87,20 +99,20 @@ export default function TrainingPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th style={{ width: 34 }}>#</th>
-                  <th>Person</th>
-                  <th style={{ textAlign: "center" }}>Bestzeit</th>
-                  <th style={{ textAlign: "center" }}>Letzte</th>
+                  <Th sortKey="rang" sort={sort} onSort={toggle} style={{ width: 34 }}>#</Th>
+                  <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
+                  <Th sortKey="best" sort={sort} onSort={toggle} align="center">Bestzeit</Th>
+                  <Th sortKey="letzte" sort={sort} onSort={toggle} align="center">Letzte</Th>
                   <th>Verlauf</th>
-                  <th>Notiz</th>
+                  <Th sortKey="notiz" sort={sort} onSort={toggle}>Notiz</Th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => {
+                {sortedRows.map((r) => {
                   const p = personById.get(r.personId);
                   return (
                     <tr key={r.personId}>
-                      <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{i + 1}</td>
+                      <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{r.rank}</td>
                       <td>
                         <span style={{ fontSize: 14 }}>{p ? personName(p) : "?"}</span>
                       </td>

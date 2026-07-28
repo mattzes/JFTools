@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, Dokumententyp, Rueckmeldung, personName } from "@/lib/api";
-import { Dialog, Empty, PageHeader, Spinner } from "@/components/ui";
+import { Dialog, Empty, PageHeader, Spinner, SortArrow, Th, useSort, sortRows } from "@/components/ui";
 import { ZIELGRUPPEN, Zielgruppe } from "@/lib/domain/constants";
 
 const COLORS = ["var(--danger)", "var(--warn)", "var(--color-accent-400)", "var(--color-accent-2)"];
@@ -40,6 +40,7 @@ export default function RueckmeldungenPage() {
   const { data: rueck, reload } = useApi<Rueckmeldung[]>("/rueckmeldungen");
   const [neuerTyp, setNeuerTyp] = useState<{ name: string; zielgruppe: Zielgruppe } | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const { sort, toggle: onSort } = useSort();
 
   const map = useMemo(() => {
     const m = new Map<string, Rueckmeldung>();
@@ -50,6 +51,16 @@ export default function RueckmeldungenPage() {
   if (!personen || !doks || !rueck) return <Spinner />;
 
   const aktive = personen.filter((p) => p.aktiv);
+  const aktiveSortiert = sortRows(aktive, sort, (p, key) => {
+    if (key === "name") return `${p.nachname} ${p.vorname}`;
+    if (key.startsWith("d:")) {
+      const did = Number(key.slice(2));
+      const d = doks.find((x) => x.id === did);
+      if (!d || !inZielgruppe(p, d.zielgruppe)) return null;
+      return map.get(`${p.id}:${did}`)?.erhalten ? 0 : 1; // erhalten zuerst
+    }
+    return null;
+  });
 
   async function toggle(personId: number, dokumententypId: number) {
     const cur = map.get(`${personId}:${dokumententypId}`);
@@ -122,19 +133,30 @@ export default function RueckmeldungenPage() {
             >
               <thead>
                 <tr>
-                  <th>Name</th>
-                  {doks.map((d) => (
-                    <th key={d.id} style={{ textAlign: "center" }}>
-                      <div>{d.name}</div>
-                      {d.zielgruppe !== "alle" && (
-                        <div style={{ fontSize: 10, fontWeight: 400, color: "var(--color-neutral-500)", textTransform: "none", letterSpacing: 0 }}>{ZIEL_LABEL[d.zielgruppe]}</div>
-                      )}
-                    </th>
-                  ))}
+                  <Th sortKey="name" sort={sort} onSort={onSort}>Name</Th>
+                  {doks.map((d) => {
+                    const aktiv = sort?.key === `d:${d.id}`;
+                    return (
+                      <th
+                        key={d.id}
+                        onClick={() => onSort(`d:${d.id}`)}
+                        title="Klicken zum Sortieren"
+                        style={{ textAlign: "center", cursor: "pointer", userSelect: "none" }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                          {d.name}
+                          <SortArrow dir={aktiv ? sort!.dir : null} />
+                        </div>
+                        {d.zielgruppe !== "alle" && (
+                          <div style={{ fontSize: 10, fontWeight: 400, color: "var(--color-neutral-500)", textTransform: "none", letterSpacing: 0 }}>{ZIEL_LABEL[d.zielgruppe]}</div>
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {aktive.map((p) => (
+                {aktiveSortiert.map((p) => (
                   <tr key={p.id}>
                     <td>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>

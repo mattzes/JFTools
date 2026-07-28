@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, useApi, Person, Termin, Verfuegbarkeit, personName } from "@/lib/api";
-import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, fmtDate, fmtDateShort } from "@/components/ui";
+import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, SortArrow, Th, fmtDate, fmtDateShort, useSort, sortRows } from "@/components/ui";
 import { PLANUNGSMODI, ZIELGRUPPEN, Planungsmodus, Zielgruppe } from "@/lib/domain/constants";
 
 const STATUS_CELL = {
@@ -17,6 +17,9 @@ const MODUS_LABEL: Record<Planungsmodus, string> = {
   a_teil: "A-Teil",
   a_und_b_teil: "A und B-Teil",
 };
+
+const MODUS_RANG: Record<Planungsmodus, number> = { keine: 0, nur_gruppen: 1, a_teil: 2, a_und_b_teil: 3 };
+const STATUS_RANG = { ja: 0, nein: 1, offen: 2 } as const;
 
 const ZIEL_LABEL: Record<Zielgruppe, string> = {
   alle: "alle",
@@ -242,6 +245,17 @@ function MatrixView({
   onCycle: (personId: number, terminId: number) => void;
   editMode: boolean;
 }) {
+  const { sort, toggle } = useSort();
+  const persons = sortRows(aktive, sort, (p, key) => {
+    if (key === "name") return `${p.nachname} ${p.vorname}`;
+    if (key.startsWith("t:")) {
+      const tid = Number(key.slice(2));
+      const t = termine.find((x) => x.id === tid);
+      if (!t || !zielPersonen(t).some((z) => z.id === p.id)) return null;
+      return STATUS_RANG[cellMap.get(`${p.id}:${tid}`) ?? "offen"];
+    }
+    return null;
+  });
   return (
     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
       <table
@@ -250,19 +264,26 @@ function MatrixView({
       >
       <thead>
         <tr>
-          <th style={{ minWidth: 150 }}>Name</th>
+          <Th sortKey="name" sort={sort} onSort={toggle} style={{ minWidth: 150 }}>Name</Th>
           {termine.map((t) => {
             const ziel = zielPersonen(t);
             const ja = ziel.filter((p) => cellMap.get(`${p.id}:${t.id}`) === "ja").length;
             const d = fmtDateShort(t.datumVon);
+            const aktiv = sort?.key === `t:${t.id}`;
             return (
-              <th key={t.id} style={{ textAlign: "center", paddingBottom: 8, verticalAlign: "top" }}>
+              <th
+                key={t.id}
+                onClick={() => toggle(`t:${t.id}`)}
+                title="Klicken zum Sortieren"
+                style={{ textAlign: "center", paddingBottom: 8, verticalAlign: "top", cursor: "pointer", userSelect: "none" }}
+              >
                 <div style={{ fontSize: 12, color: "var(--color-text)", fontWeight: 600 }}>{d.tag}. {d.mon}</div>
                 <div style={{ margin: "4px auto 2px", maxWidth: 96, fontSize: 10.5, fontWeight: 400, color: "var(--color-neutral-400)", textTransform: "none", letterSpacing: 0, whiteSpace: "normal", lineHeight: 1.25 }}>
                   {t.titel}
                 </div>
-                <div style={{ fontSize: 10, color: "var(--color-neutral-500)", textTransform: "none", letterSpacing: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, fontSize: 10, color: "var(--color-neutral-500)", textTransform: "none", letterSpacing: 0 }}>
                   {ja}/{ziel.length}
+                  <SortArrow dir={aktiv ? sort!.dir : null} />
                 </div>
               </th>
             );
@@ -270,7 +291,7 @@ function MatrixView({
         </tr>
       </thead>
       <tbody>
-        {aktive.map((p) => (
+        {persons.map((p) => (
           <tr key={p.id}>
             <td>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
@@ -337,31 +358,43 @@ function ListeView({
   zielPersonen: (t: Termin) => Person[];
   onEdit: (t: Termin) => void;
 }) {
+  const { sort, toggle } = useSort();
+  const rows = termine.map((t) => {
+    const ziel = zielPersonen(t);
+    const ja = verf.filter((v) => v.terminId === t.id && v.status === "ja" && ziel.some((p) => p.id === v.personId)).length;
+    return { t, ja, ges: ziel.length };
+  });
+  const sorted = sortRows(rows, sort, (r, key) => {
+    switch (key) {
+      case "datum": return r.t.datumVon;
+      case "titel": return r.t.titel;
+      case "modus": return MODUS_RANG[r.t.planungsmodus];
+      case "ziel": return ZIEL_LABEL[r.t.zielgruppe];
+      case "zusagen": return r.ja;
+      default: return null;
+    }
+  });
   return (
     <table className="table">
       <thead>
         <tr>
-          <th>Datum</th>
-          <th>Titel</th>
-          <th>Modus</th>
-          <th>Zielgruppe</th>
-          <th style={{ textAlign: "right" }}>Zusagen</th>
+          <Th sortKey="datum" sort={sort} onSort={toggle}>Datum</Th>
+          <Th sortKey="titel" sort={sort} onSort={toggle}>Titel</Th>
+          <Th sortKey="modus" sort={sort} onSort={toggle}>Modus</Th>
+          <Th sortKey="ziel" sort={sort} onSort={toggle}>Zielgruppe</Th>
+          <Th sortKey="zusagen" sort={sort} onSort={toggle} align="right">Zusagen</Th>
         </tr>
       </thead>
       <tbody>
-        {termine.map((t) => {
-          const ziel = zielPersonen(t);
-          const ja = verf.filter((v) => v.terminId === t.id && v.status === "ja" && ziel.some((p) => p.id === v.personId)).length;
-          return (
-            <tr key={t.id} onClick={() => onEdit(t)} style={{ cursor: "pointer" }} title="Termin bearbeiten">
-              <td style={{ whiteSpace: "nowrap" }}>{fmtDate(t.datumVon)}{t.datumBis ? `–${fmtDate(t.datumBis).slice(0, 5)}` : ""}</td>
-              <td style={{ fontWeight: 500 }}>{t.titel}</td>
-              <td><ModeTag modus={t.planungsmodus} /></td>
-              <td style={{ fontSize: 14, color: "var(--color-neutral-400)" }}>{ZIEL_LABEL[t.zielgruppe]}</td>
-              <td style={{ textAlign: "right", fontWeight: 600 }}>{ja}<span style={{ color: "var(--color-neutral-600)" }}>/{ziel.length}</span></td>
-            </tr>
-          );
-        })}
+        {sorted.map(({ t, ja, ges }) => (
+          <tr key={t.id} onClick={() => onEdit(t)} style={{ cursor: "pointer" }} title="Termin bearbeiten">
+            <td style={{ whiteSpace: "nowrap" }}>{fmtDate(t.datumVon)}{t.datumBis ? `–${fmtDate(t.datumBis).slice(0, 5)}` : ""}</td>
+            <td style={{ fontWeight: 500 }}>{t.titel}</td>
+            <td><ModeTag modus={t.planungsmodus} /></td>
+            <td style={{ fontSize: 14, color: "var(--color-neutral-400)" }}>{ZIEL_LABEL[t.zielgruppe]}</td>
+            <td style={{ textAlign: "right", fontWeight: 600 }}>{ja}<span style={{ color: "var(--color-neutral-600)" }}>/{ges}</span></td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );

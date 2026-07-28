@@ -309,3 +309,85 @@ export function fmtDateShort(iso: string): { tag: string; mon: string } {
   const d = new Date(iso + "T00:00:00");
   return { tag: String(d.getDate()).padStart(2, "0"), mon: MON[d.getMonth()] };
 }
+
+/* ── Sortierbare Tabellen ──
+   useSort() hält den Sortierzustand; ein Klick auf eine Spalte schaltet
+   aufsteigend → absteigend → aus. sortRows() sortiert stabil (gleiche Werte
+   behalten ihre Reihenfolge, Leerwerte immer ans Ende). <Th> ist der klickbare
+   Kopf mit Richtungspfeil. */
+export type SortDir = "asc" | "desc";
+export type SortState = { key: string; dir: SortDir } | null;
+export type SortVal = string | number | boolean | null | undefined;
+
+export function useSort(initial: SortState = null) {
+  const [sort, setSort] = useState<SortState>(initial);
+  const toggle = (key: string) =>
+    setSort((s) => (!s || s.key !== key ? { key, dir: "asc" } : s.dir === "asc" ? { key, dir: "desc" } : null));
+  return { sort, toggle };
+}
+
+function sortEmpty(v: SortVal) {
+  return v === null || v === undefined || v === "";
+}
+function sortCmp(a: SortVal, b: SortVal) {
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  if (typeof a === "boolean" || typeof b === "boolean") return (a ? 1 : 0) - (b ? 1 : 0);
+  return String(a).localeCompare(String(b), "de", { numeric: true, sensitivity: "base" });
+}
+
+export function sortRows<T>(rows: T[], sort: SortState, accessor: (row: T, key: string) => SortVal): T[] {
+  if (!sort) return rows;
+  const dir = sort.dir === "asc" ? 1 : -1;
+  return rows
+    .map((r, i) => [r, i] as const)
+    .sort(([a, ai], [b, bi]) => {
+      const av = accessor(a, sort.key);
+      const bv = accessor(b, sort.key);
+      const ae = sortEmpty(av);
+      const be = sortEmpty(bv);
+      if (ae || be) return ae === be ? ai - bi : ae ? 1 : -1; // Leerwerte immer ans Ende
+      const c = sortCmp(av, bv);
+      return c !== 0 ? c * dir : ai - bi;
+    })
+    .map(([r]) => r);
+}
+
+export function SortArrow({ dir }: { dir: SortDir | null }) {
+  return (
+    <i
+      className={`ph-bold ${dir === "asc" ? "ph-caret-up" : dir === "desc" ? "ph-caret-down" : "ph-caret-up-down"}`}
+      style={{ fontSize: 11, color: dir ? "var(--color-accent-300)" : "var(--color-neutral-600)", flex: "none" }}
+    />
+  );
+}
+
+export function Th({
+  children,
+  sortKey,
+  sort,
+  onSort,
+  align = "left",
+  style,
+}: {
+  children?: React.ReactNode;
+  sortKey?: string;
+  sort: SortState;
+  onSort: (key: string) => void;
+  align?: "left" | "center" | "right";
+  style?: React.CSSProperties;
+}) {
+  const active = !!sortKey && sort?.key === sortKey;
+  const justify = align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start";
+  return (
+    <th
+      onClick={sortKey ? () => onSort(sortKey) : undefined}
+      style={{ cursor: sortKey ? "pointer" : undefined, userSelect: "none", textAlign: align, ...style }}
+      title={sortKey ? "Klicken zum Sortieren" : undefined}
+    >
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, justifyContent: justify, verticalAlign: "middle" }}>
+        {children}
+        {sortKey && <SortArrow dir={active ? sort!.dir : null} />}
+      </span>
+    </th>
+  );
+}
