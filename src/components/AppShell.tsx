@@ -57,15 +57,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           {!collapsed && (
             <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-              <span
-                style={{
-                  width: 30, height: 30, flex: "none", borderRadius: 8, display: "grid",
-                  placeItems: "center", background: "linear-gradient(150deg,#9184d9,#5d5294)",
-                  color: "#fff", fontSize: 17,
-                }}
-              >
-                <i className="ph ph-flame" />
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icon.svg"
+                alt="JF Verwaltung"
+                width={30}
+                height={30}
+                style={{ flex: "none", borderRadius: 8 }}
+              />
               <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
                 <b style={{ fontSize: 14, fontWeight: 600 }}>JF Verwaltung</b>
               </span>
