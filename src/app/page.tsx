@@ -35,19 +35,16 @@ export default function UebersichtPage() {
   }
 
   // Offene Checkliste (alle Dokumenttypen × jeweilige Zielgruppe)
-  let fehlendeRueck = 0;
   const fehltJe: { name: string; offen: number }[] = [];
   for (const d of doks) {
     const ziel = d.zielgruppe === "nur_betreuer" ? betreuer : d.zielgruppe === "nur_jugendliche" ? jugend : aktive;
     const offen = ziel.filter((p) => !rueck.some((r) => r.personId === p.id && r.dokumententypId === d.id && r.erhalten)).length;
-    fehlendeRueck += offen;
     if (offen > 0) fehltJe.push({ name: d.name, offen });
   }
 
   const kpis = [
     { n: aktive.length, label: "Aktive Personen", icon: "ph-users-three", iconBg: "var(--color-accent-900)", iconFg: "var(--color-accent-200)", delta: `${jugend.length} J · ${betreuer.length} B` },
     { n: offeneVerf, label: "Fehlende Terminrückmeldungen", icon: "ph-question", iconBg: "rgba(240,178,58,.16)", iconFg: "var(--warn)", delta: `${termine.filter((t) => (t.datumBis ?? t.datumVon) >= heute).length} Termine` },
-    { n: fehlendeRueck, label: "Offene Checkliste", icon: "ph-clipboard-text", iconBg: "rgba(232,110,110,.16)", iconFg: "var(--danger)", delta: `${doks.length} Typen` },
   ];
 
   const heuteFmt = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -58,7 +55,7 @@ export default function UebersichtPage() {
 
       <div style={{ flex: 1, overflowY: "auto", padding: "18px 18px 24px" }} className="lg:px-6">
         {/* KPIs */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3" style={{ marginBottom: 16 }}>
+        <div className="grid grid-cols-2 gap-3" style={{ marginBottom: 16 }}>
           {kpis.map((k) => (
             <div className="kpi" key={k.label}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
