@@ -765,7 +765,27 @@ function KnotenDialog({
   const [datum, setDatum] = useState(heute());
   const [werte, setWerte] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [modus, setModus] = useState<"eingabe" | "liste">("eingabe");
   const confirm = useConfirm();
+  const { sort, toggle } = useSort();
+
+  // Alle erfassten Knoten-Zeiten dieser Person (für die tabellarische Auflistung)
+  const zeilen = knoten.flatMap((kn) => {
+    const disziplinId = disziplinIdByName.get(kn);
+    const ms = messungen
+      .filter((m) => m.personId === person.id && m.disziplinId === disziplinId && m.wertSekunden != null)
+      .sort((a, b) => b.datum.localeCompare(a.datum));
+    const best = ms.length ? Math.min(...ms.map((m) => m.wertSekunden!)) : null;
+    return ms.map((m) => ({ m, kn, best }));
+  });
+  const sortedZeilen = sortRows(zeilen, sort, (r, key) => {
+    switch (key) {
+      case "knoten": return knoten.indexOf(r.kn);
+      case "datum": return r.m.datum;
+      case "zeit": return r.m.wertSekunden;
+      default: return null;
+    }
+  });
 
   async function saveNotiz() {
     await api("/training-eintraege", {
@@ -807,57 +827,71 @@ function KnotenDialog({
           <label>Notiz (pro Person)</label>
           <textarea className="input" value={notiz} onChange={(e) => setNotiz(e.target.value)} />
         </div>
-        <div className="field">
-          <label>Datum</label>
-          <DatePicker value={datum} onChange={setDatum} clearable={false} />
+        <div className="seg" style={{ fontSize: 12, alignSelf: "flex-start" }}>
+          <button className="seg-opt" data-on={modus === "eingabe"} onClick={() => setModus("eingabe")}>Eingabe</button>
+          <button className="seg-opt" data-on={modus === "liste"} onClick={() => setModus("liste")}>Zeiten ({zeilen.length})</button>
         </div>
       </div>
 
       <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
-      {knoten.map((kn) => {
-        const disziplinId = disziplinIdByName.get(kn);
-        const eintraege = messungen
-          .filter((m) => m.personId === person.id && m.disziplinId === disziplinId && m.wertSekunden != null)
-          .sort((a, b) => b.datum.localeCompare(a.datum));
-        const vals = eintraege.map((m) => m.wertSekunden!);
-        const best = vals.length ? Math.min(...vals) : null;
-        return (
-          <div key={kn} style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--color-divider)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{kn}</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                className="input"
-                style={{ maxWidth: 120 }}
-                placeholder="Sek."
-                value={werte[kn] ?? ""}
-                onChange={(e) => setWerte((prev) => ({ ...prev, [kn]: e.target.value }))}
-              />
+        {modus === "eingabe" ? (
+          <>
+            <div className="field" style={{ marginTop: 4 }}>
+              <label>Datum</label>
+              <DatePicker value={datum} onChange={setDatum} clearable={false} />
             </div>
-            {eintraege.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                {eintraege.map((m) => (
-                  <span key={m.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, background: "var(--color-neutral-800)", borderRadius: 6, padding: "2px 6px" }}>
-                    <b style={{ color: m.wertSekunden === best ? "var(--color-accent-200)" : "inherit" }}>{m.wertSekunden}s</b>
-                    <span style={{ color: "var(--color-neutral-500)" }}>{fmtDatum(m.datum)}</span>
-                    <button title="löschen" onClick={() => del(m.id)} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-500)", padding: 0 }}>
-                      <i className="ph ph-x" style={{ fontSize: 12 }} />
-                    </button>
-                  </span>
-                ))}
+            {knoten.map((kn) => (
+              <div key={kn} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{kn}</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className="input"
+                  style={{ maxWidth: 120 }}
+                  placeholder="Sek."
+                  value={werte[kn] ?? ""}
+                  onChange={(e) => setWerte((prev) => ({ ...prev, [kn]: e.target.value }))}
+                />
               </div>
-            )}
-          </div>
-        );
-      })}
+            ))}
+          </>
+        ) : zeilen.length === 0 ? (
+          <div style={{ fontSize: 13, color: "var(--color-neutral-500)", padding: "16px 4px", textAlign: "center" }}>Noch keine Zeiten erfasst.</div>
+        ) : (
+          <table className="table" style={{ marginTop: 4 }}>
+            <thead>
+              <tr>
+                <Th sortKey="knoten" sort={sort} onSort={toggle}>Knoten</Th>
+                <Th sortKey="datum" sort={sort} onSort={toggle}>Datum</Th>
+                <Th sortKey="zeit" sort={sort} onSort={toggle} align="center">Zeit</Th>
+                <th style={{ width: 40 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {sortedZeilen.map(({ m, kn, best }) => (
+                <tr key={m.id}>
+                  <td style={{ fontSize: 13 }}>{kn}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{fmtDatum(m.datum)}</td>
+                  <td style={{ textAlign: "center" }}><b style={{ color: m.wertSekunden === best ? "var(--color-accent-200)" : "inherit" }}>{m.wertSekunden}s</b></td>
+                  <td style={{ textAlign: "center" }}>
+                    <button title="Zeit löschen" onClick={() => del(m.id)} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-500)", padding: 4 }}>
+                      <i className="ph ph-trash" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="dialog-actions" style={{ position: "sticky", bottom: 0, zIndex: 1, background: "var(--color-surface)", paddingTop: 8 }}>
         <button className="btn btn-secondary" onClick={async () => { await saveNotiz(); onChanged(); onClose(); }}>Schließen</button>
-        <button className="btn btn-primary" onClick={speichern} disabled={busy || (!hatEingabe && notiz === (eintrag?.notiz ?? ""))}>
-          <i className="ph ph-check" />Speichern
-        </button>
+        {modus === "eingabe" && (
+          <button className="btn btn-primary" onClick={speichern} disabled={busy || (!hatEingabe && notiz === (eintrag?.notiz ?? ""))}>
+            <i className="ph ph-check" />Speichern
+          </button>
+        )}
       </div>
     </Dialog>
   );
