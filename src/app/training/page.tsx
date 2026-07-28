@@ -34,7 +34,6 @@ export default function TrainingPage() {
   const { data: messungen, reload: reloadMess } = useApi<Messung[]>("/messungen");
   const { data: eintraege, reload: reloadEintr } = useApi<TrainingEintrag[]>("/training-eintraege");
   const [aktiveKey, setAktiveKey] = useStoredState("training.kat", TRAINING_KATEGORIEN[0].key);
-  const [addOpen, setAddOpen] = useState(false);
   const [detailPerson, setDetailPerson] = useState<number | null>(null);
 
   const kat = TRAINING_KATEGORIEN.find((k) => k.key === aktiveKey) ?? TRAINING_KATEGORIEN[0];
@@ -42,12 +41,19 @@ export default function TrainingPage() {
   const personById = useMemo(() => new Map((personen ?? []).map((p) => [p.id, p])), [personen]);
   const disziplinIdByName = useMemo(() => new Map((disziplinen ?? []).map((d) => [d.name, d.id])), [disziplinen]);
 
-  // Nur Teilnehmer, deren Person noch aktiv ist (deaktivierte werden hier nicht angezeigt)
-  const teilnehmer = useMemo(
-    () => (eintraege ?? []).filter((e) => e.kategorie === kat.key && personById.get(e.personId)?.aktiv),
-    [eintraege, kat.key, personById],
+  // Notiz/Wert je Person für die aktive Kategorie (nicht jede Person hat einen Eintrag)
+  const eintragByPerson = useMemo(
+    () => new Map((eintraege ?? []).filter((e) => e.kategorie === kat.key).map((e) => [e.personId, e])),
+    [eintraege, kat.key],
   );
-  const eintragByPerson = useMemo(() => new Map(teilnehmer.map((e) => [e.personId, e])), [teilnehmer]);
+  // Standardmäßig werden ALLE aktiven Jugendlichen in jeder Kategorie angezeigt.
+  const jugendliche = useMemo(
+    () =>
+      (personen ?? [])
+        .filter((p) => p.aktiv && p.rolle === "jugendlich")
+        .sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`)),
+    [personen],
+  );
 
   if (!personen || !disziplinen || !messungen || !eintraege) return <Spinner />;
 
@@ -55,12 +61,6 @@ export default function TrainingPage() {
     reloadMess();
     reloadEintr();
   };
-
-  // Disziplin-IDs, die zu dieser Kategorie gehören (für Aufräumen beim Entfernen)
-  function katDisziplinIds(k: TrainingKategorie): number[] {
-    const names = k.kind === "zeit" && k.disziplin ? [k.disziplin] : k.kind === "knoten" ? [...(k.disziplinen ?? [])] : [];
-    return names.map((n) => disziplinIdByName.get(n)).filter((x): x is number => x != null);
-  }
 
   async function setWert(personId: number, wert: string | null) {
     await api("/training-eintraege", {
@@ -70,25 +70,12 @@ export default function TrainingPage() {
     reloadEintr();
   }
 
-  async function removeTeilnehmer(e: TrainingEintrag) {
-    if (!confirm(`${personName(personById.get(e.personId)!)} aus „${kat.label}" entfernen? Erfasste Zeiten gehen verloren.`)) return;
-    const disIds = new Set(katDisziplinIds(kat));
-    const toDelete = messungen!.filter((m) => m.personId === e.personId && disIds.has(m.disziplinId));
-    for (const m of toDelete) await api(`/messungen/${m.id}`, { method: "DELETE" });
-    await api(`/training-eintraege/${e.id}`, { method: "DELETE" });
-    reloadAll();
-  }
-
+  const detailPersonObj = detailPerson != null ? personById.get(detailPerson) : undefined;
   const detailEintrag = detailPerson != null ? eintragByPerson.get(detailPerson) : undefined;
 
   return (
     <>
-      <PageHeader title="Training" sub={kat.label}>
-        <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
-          <i className="ph ph-user-plus" />
-          Person hinzufügen
-        </button>
-      </PageHeader>
+      <PageHeader title="Training" sub={kat.label} />
 
       {/* Feste Kategorie-Umschaltung (segmentiert wie Matrix/Liste bei Terminen) */}
       <div style={{ padding: "14px 18px 6px", overflowX: "auto" }} className="lg:px-6">
@@ -107,15 +94,15 @@ export default function TrainingPage() {
         </div>
       </div>
 
-      {teilnehmer.length === 0 ? (
-        <Empty icon="ph-user-plus" text="Noch keine Personen" hint="Füge über den Button oben Personen zu dieser Kategorie hinzu." />
+      {jugendliche.length === 0 ? (
+        <Empty icon="ph-users-three" text="Keine aktiven Jugendlichen" hint="Lege unter Personen aktive Jugendliche an." />
       ) : (
         <div style={{ flex: 1, overflowY: "auto" }}>
           {kat.kind === "zeit" && (
             <ZeitTabelle
               kat={kat}
-              teilnehmer={teilnehmer}
-              personById={personById}
+              personen={jugendliche}
+              eintragByPerson={eintragByPerson}
               messungen={messungen}
               disziplinId={kat.disziplin ? disziplinIdByName.get(kat.disziplin) : undefined}
               onOpen={setDetailPerson}
@@ -124,8 +111,8 @@ export default function TrainingPage() {
           {kat.kind === "knoten" && (
             <KnotenTabelle
               kat={kat}
-              teilnehmer={teilnehmer}
-              personById={personById}
+              personen={jugendliche}
+              eintragByPerson={eintragByPerson}
               messungen={messungen}
               disziplinIdByName={disziplinIdByName}
               onOpen={setDetailPerson}
@@ -134,47 +121,34 @@ export default function TrainingPage() {
           {(kat.kind === "wassergraben" || kat.kind === "leinbeutel") && (
             <StatischTabelle
               kat={kat}
-              teilnehmer={teilnehmer}
-              personById={personById}
+              personen={jugendliche}
+              eintragByPerson={eintragByPerson}
               onSetWert={setWert}
-              onRemove={removeTeilnehmer}
             />
           )}
         </div>
       )}
 
-      {addOpen && (
-        <AddDialog
-          kategorie={kat}
-          personen={personen.filter((p) => p.aktiv)}
-          vorhanden={new Set(teilnehmer.map((e) => e.personId))}
-          onClose={() => setAddOpen(false)}
-          onAdded={reloadEintr}
-        />
-      )}
-
-      {detailPerson != null && detailEintrag && kat.kind === "zeit" && (
+      {detailPersonObj && kat.kind === "zeit" && (
         <ZeitDialog
           kat={kat}
           eintrag={detailEintrag}
-          person={personById.get(detailPerson)!}
+          person={detailPersonObj}
           messungen={messungen}
           disziplinId={kat.disziplin ? disziplinIdByName.get(kat.disziplin) : undefined}
           onClose={() => setDetailPerson(null)}
           onChanged={reloadAll}
-          onRemove={async () => { await removeTeilnehmer(detailEintrag); setDetailPerson(null); }}
         />
       )}
-      {detailPerson != null && detailEintrag && kat.kind === "knoten" && (
+      {detailPersonObj && kat.kind === "knoten" && (
         <KnotenDialog
           kat={kat}
           eintrag={detailEintrag}
-          person={personById.get(detailPerson)!}
+          person={detailPersonObj}
           messungen={messungen}
           disziplinIdByName={disziplinIdByName}
           onClose={() => setDetailPerson(null)}
           onChanged={reloadAll}
-          onRemove={async () => { await removeTeilnehmer(detailEintrag); setDetailPerson(null); }}
         />
       )}
     </>
@@ -183,30 +157,31 @@ export default function TrainingPage() {
 
 // ── Zeit-Kategorien ──
 function ZeitTabelle({
-  teilnehmer,
-  personById,
+  personen,
+  eintragByPerson,
   messungen,
   disziplinId,
   onOpen,
 }: {
   kat: TrainingKategorie;
-  teilnehmer: TrainingEintrag[];
-  personById: Map<number, Person>;
+  personen: Person[];
+  eintragByPerson: Map<number, TrainingEintrag>;
   messungen: Messung[];
   disziplinId: number | undefined;
   onOpen: (personId: number) => void;
 }) {
   const { sort, toggle } = useSort();
-  const rows = teilnehmer.map((e) => {
-    const p = personById.get(e.personId);
-    return { e, p, agg: aggFor(messungen, e.personId, disziplinId), note: e.notiz };
-  });
+  const rows = personen.map((p) => ({
+    p,
+    agg: aggFor(messungen, p.id, disziplinId),
+    note: eintragByPerson.get(p.id)?.notiz ?? null,
+  }));
   const ranked = [...rows].sort((a, b) => (a.agg?.best ?? Infinity) - (b.agg?.best ?? Infinity));
-  const rankByPerson = new Map(ranked.map((r, i) => [r.e.personId, r.agg ? i + 1 : null]));
+  const rankByPerson = new Map(ranked.map((r, i) => [r.p.id, r.agg ? i + 1 : null]));
   const sorted = sortRows(rows, sort, (r, key) => {
     switch (key) {
-      case "rang": return rankByPerson.get(r.e.personId);
-      case "person": return r.p ? `${r.p.nachname} ${r.p.vorname}` : "";
+      case "rang": return rankByPerson.get(r.p.id);
+      case "person": return `${r.p.nachname} ${r.p.vorname}`;
       case "best": return r.agg?.best ?? null;
       case "schnitt": return r.agg?.avg ?? null;
       case "letzte": return r.agg?.last ?? null;
@@ -230,9 +205,9 @@ function ZeitTabelle({
         </thead>
         <tbody>
           {sorted.map((r) => (
-            <tr key={r.e.personId} onClick={() => onOpen(r.e.personId)} style={{ cursor: "pointer" }}>
-              <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{rankByPerson.get(r.e.personId) ?? "—"}</td>
-              <td style={{ fontSize: 14 }}>{r.p ? personName(r.p) : "?"}</td>
+            <tr key={r.p.id} onClick={() => onOpen(r.p.id)} style={{ cursor: "pointer" }}>
+              <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{rankByPerson.get(r.p.id) ?? "—"}</td>
+              <td style={{ fontSize: 14 }}>{personName(r.p)}</td>
               <td style={{ textAlign: "center" }}>{r.agg ? <b style={{ color: "var(--color-accent-200)", fontSize: 15 }}>{r.agg.best}s</b> : "—"}</td>
               <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.avg.toFixed(1)}s` : "—"}</td>
               <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.last}s` : "—"}</td>
@@ -244,7 +219,7 @@ function ZeitTabelle({
       </table>
 
       {/* Mobile */}
-      <MobileCards rows={ranked.map((r) => ({ personId: r.e.personId, p: r.p, agg: r.agg, note: r.note, rank: rankByPerson.get(r.e.personId) }))} onOpen={onOpen} />
+      <MobileCards rows={ranked.map((r) => ({ personId: r.p.id, p: r.p, agg: r.agg, note: r.note, rank: rankByPerson.get(r.p.id) }))} onOpen={onOpen} />
     </div>
   );
 }
@@ -286,29 +261,24 @@ function MobileCards({
 // ── Knoten ──
 function KnotenTabelle({
   kat,
-  teilnehmer,
-  personById,
+  personen,
+  eintragByPerson,
   messungen,
   disziplinIdByName,
   onOpen,
 }: {
   kat: TrainingKategorie;
-  teilnehmer: TrainingEintrag[];
-  personById: Map<number, Person>;
+  personen: Person[];
+  eintragByPerson: Map<number, TrainingEintrag>;
   messungen: Messung[];
   disziplinIdByName: Map<string, number>;
   onOpen: (personId: number) => void;
 }) {
   const knoten = kat.disziplinen ?? [];
   const { sort, toggle } = useSort();
-  const base = [...teilnehmer].sort((a, b) => {
-    const pa = personById.get(a.personId), pb = personById.get(b.personId);
-    return (pa ? `${pa.nachname} ${pa.vorname}` : "").localeCompare(pb ? `${pb.nachname} ${pb.vorname}` : "");
-  });
-  const rows = sortRows(base, sort, (e, key) => {
-    const p = personById.get(e.personId);
-    return key === "person" ? (p ? `${p.nachname} ${p.vorname}` : "") : null;
-  });
+  const rows = sortRows([...personen], sort, (p, key) =>
+    key === "person" ? `${p.nachname} ${p.vorname}` : null,
+  );
   return (
     <div className="hidden lg:block" style={{ padding: "0 18px" }}>
       <table className="table">
@@ -323,16 +293,16 @@ function KnotenTabelle({
           </tr>
         </thead>
         <tbody>
-          {rows.map((e) => {
-            const p = personById.get(e.personId);
+          {rows.map((p) => {
+            const notiz = eintragByPerson.get(p.id)?.notiz;
             return knoten.map((kn, i) => {
-              const agg = aggFor(messungen, e.personId, disziplinIdByName.get(kn));
+              const agg = aggFor(messungen, p.id, disziplinIdByName.get(kn));
               return (
-                <tr key={`${e.personId}:${kn}`} onClick={() => onOpen(e.personId)} style={{ cursor: "pointer" }}>
+                <tr key={`${p.id}:${kn}`} onClick={() => onOpen(p.id)} style={{ cursor: "pointer" }}>
                   {i === 0 && (
                     <td rowSpan={knoten.length} style={{ fontSize: 14, fontWeight: 500, verticalAlign: "top", borderRight: "1px solid var(--color-divider)" }}>
-                      {p ? personName(p) : "?"}
-                      {e.notiz && <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 4, maxWidth: 160 }}><i className="ph ph-note" /> {e.notiz}</div>}
+                      {personName(p)}
+                      {notiz && <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 4, maxWidth: 160 }}><i className="ph ph-note" /> {notiz}</div>}
                     </td>
                   )}
                   <td style={{ fontSize: 13 }}>{kn}</td>
@@ -349,13 +319,12 @@ function KnotenTabelle({
 
       {/* Mobile */}
       <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "4px 0 16px" }}>
-        {rows.map((e) => {
-          const p = personById.get(e.personId);
+        {rows.map((p) => {
           return (
-            <div key={e.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(e.personId)}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{p ? personName(p) : "?"}</div>
+            <div key={p.id} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(p.id)}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{personName(p)}</div>
               {knoten.map((kn) => {
-                const agg = aggFor(messungen, e.personId, disziplinIdByName.get(kn));
+                const agg = aggFor(messungen, p.id, disziplinIdByName.get(kn));
                 return (
                   <div key={kn} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "3px 0" }}>
                     <span style={{ flex: 1, color: "var(--color-neutral-300)" }}>{kn}</span>
@@ -374,16 +343,14 @@ function KnotenTabelle({
 // ── Statische Kategorien (Wassergraben / Leinbeutel) ──
 function StatischTabelle({
   kat,
-  teilnehmer,
-  personById,
+  personen,
+  eintragByPerson,
   onSetWert,
-  onRemove,
 }: {
   kat: TrainingKategorie;
-  teilnehmer: TrainingEintrag[];
-  personById: Map<number, Person>;
+  personen: Person[];
+  eintragByPerson: Map<number, TrainingEintrag>;
   onSetWert: (personId: number, wert: string | null) => void;
-  onRemove: (e: TrainingEintrag) => void;
 }) {
   const { sort, toggle } = useSort();
   const options: { value: string; label: string }[] =
@@ -393,15 +360,13 @@ function StatischTabelle({
   // Custom-Reihenfolge: „nicht eingetragen" = niedrigster Wert (0), dann in Options-Reihenfolge
   // (Wassergraben: ohne Geräte → mit Verteiler → mit Schlauchpaket).
   const wertRang = new Map(options.map((o, i) => [o.value, i + 1]));
-  const base = [...teilnehmer].sort((a, b) => {
-    const pa = personById.get(a.personId), pb = personById.get(b.personId);
-    return (pa ? `${pa.nachname} ${pa.vorname}` : "").localeCompare(pb ? `${pb.nachname} ${pb.vorname}` : "");
-  });
-  const rows = sortRows(base, sort, (e, key) => {
-    const p = personById.get(e.personId);
+  const rows = sortRows([...personen], sort, (p, key) => {
     switch (key) {
-      case "person": return p ? `${p.nachname} ${p.vorname}` : "";
-      case "wert": return e.wert != null ? wertRang.get(e.wert) ?? 0 : 0;
+      case "person": return `${p.nachname} ${p.vorname}`;
+      case "wert": {
+        const w = eintragByPerson.get(p.id)?.wert;
+        return w != null ? wertRang.get(w) ?? 0 : 0;
+      }
       default: return null;
     }
   });
@@ -412,40 +377,27 @@ function StatischTabelle({
           <tr>
             <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
             <Th sortKey="wert" sort={sort} onSort={toggle}>{kat.kind === "wassergraben" ? "Erreicht" : "Ergebnis"}</Th>
-            <th style={{ width: 44 }} />
           </tr>
         </thead>
         <tbody>
-          {rows.map((e) => {
-            const p = personById.get(e.personId);
-            return (
-              <tr key={e.personId}>
-                <td style={{ fontSize: 14 }}>{p ? personName(p) : "?"}</td>
-                <td>
-                  <select
-                    className="input"
-                    style={{ maxWidth: 260 }}
-                    value={e.wert ?? ""}
-                    onChange={(ev) => onSetWert(e.personId, ev.target.value || null)}
-                  >
-                    <option value="">— nicht eingetragen —</option>
-                    {options.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  <button
-                    title="Teilnehmer entfernen"
-                    onClick={() => onRemove(e)}
-                    style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-500)", padding: 4 }}
-                  >
-                    <i className="ph ph-trash" />
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
+          {rows.map((p) => (
+            <tr key={p.id}>
+              <td style={{ fontSize: 14 }}>{personName(p)}</td>
+              <td>
+                <select
+                  className="input"
+                  style={{ maxWidth: 260 }}
+                  value={eintragByPerson.get(p.id)?.wert ?? ""}
+                  onChange={(ev) => onSetWert(p.id, ev.target.value || null)}
+                >
+                  <option value="">— nicht eingetragen —</option>
+                  {options.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -469,72 +421,6 @@ function fmtDatum(iso: string) {
 }
 
 // ── Dialoge ──
-function AddDialog({
-  kategorie,
-  personen,
-  vorhanden,
-  onClose,
-  onAdded,
-}: {
-  kategorie: TrainingKategorie;
-  personen: Person[];
-  vorhanden: Set<number>;
-  onClose: () => void;
-  onAdded: () => void;
-}) {
-  const [added, setAdded] = useState<Set<number>>(new Set());
-  const [busyId, setBusyId] = useState<number | null>(null);
-  const verfuegbar = personen
-    .filter((p) => !vorhanden.has(p.id) && !added.has(p.id))
-    .sort((a, b) => a.nachname.localeCompare(b.nachname));
-
-  async function add(id: number) {
-    setBusyId(id);
-    await api("/training-eintraege", {
-      method: "PUT",
-      body: JSON.stringify({ personId: id, kategorie: kategorie.key, notiz: null, wert: null }),
-    });
-    setAdded((prev) => new Set(prev).add(id));
-    setBusyId(null);
-    onAdded();
-  }
-
-  return (
-    <Dialog title={`Personen hinzufügen — ${kategorie.label}`} onClose={onClose}>
-      {added.size > 0 && (
-        <div style={{ fontSize: 12, color: "var(--color-accent-200)", marginBottom: 8 }}>
-          <i className="ph ph-check" /> {added.size} hinzugefügt
-        </div>
-      )}
-      {verfuegbar.length === 0 ? (
-        <Empty icon="ph-users-three" text="Alle aktiven Personen sind bereits dabei" />
-      ) : (
-        <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
-          <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)", padding: "0 8px 6px" }}>Namen antippen zum Hinzufügen</div>
-          {verfuegbar.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => add(p.id)}
-              disabled={busyId === p.id}
-              style={{
-                display: "flex", alignItems: "center", gap: 9, padding: "9px 10px", borderRadius: 8,
-                border: 0, background: "var(--color-surface)", color: "inherit", cursor: "pointer",
-                fontSize: 14, textAlign: "left", width: "100%",
-              }}
-            >
-              <i className="ph ph-plus-circle" style={{ color: "var(--color-accent-300)", fontSize: 17, flex: "none" }} />
-              {personName(p)}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="dialog-actions">
-        <button className="btn btn-secondary" onClick={onClose}>Fertig</button>
-      </div>
-    </Dialog>
-  );
-}
-
 function ZeitDialog({
   kat,
   eintrag,
@@ -543,18 +429,16 @@ function ZeitDialog({
   disziplinId,
   onClose,
   onChanged,
-  onRemove,
 }: {
   kat: TrainingKategorie;
-  eintrag: TrainingEintrag;
+  eintrag: TrainingEintrag | undefined;
   person: Person;
   messungen: Messung[];
   disziplinId: number | undefined;
   onClose: () => void;
   onChanged: () => void;
-  onRemove: () => void;
 }) {
-  const [notiz, setNotiz] = useState(eintrag.notiz ?? "");
+  const [notiz, setNotiz] = useState(eintrag?.notiz ?? "");
   const [datum, setDatum] = useState(heute());
   const [wert, setWert] = useState("");
   const [busy, setBusy] = useState(false);
@@ -636,7 +520,6 @@ function ZeitDialog({
       )}
 
       <div className="dialog-actions" style={{ position: "sticky", bottom: 0, zIndex: 1, background: "var(--color-surface)", paddingTop: 8 }}>
-        <button className="btn btn-danger" onClick={onRemove} style={{ marginRight: "auto" }}><i className="ph ph-user-minus" />Teilnehmer entfernen</button>
         <button className="btn btn-secondary" onClick={async () => { await saveNotiz(); onChanged(); onClose(); }}>Schließen</button>
       </div>
     </Dialog>
@@ -651,19 +534,17 @@ function KnotenDialog({
   disziplinIdByName,
   onClose,
   onChanged,
-  onRemove,
 }: {
   kat: TrainingKategorie;
-  eintrag: TrainingEintrag;
+  eintrag: TrainingEintrag | undefined;
   person: Person;
   messungen: Messung[];
   disziplinIdByName: Map<string, number>;
   onClose: () => void;
   onChanged: () => void;
-  onRemove: () => void;
 }) {
   const knoten = kat.disziplinen ?? [];
-  const [notiz, setNotiz] = useState(eintrag.notiz ?? "");
+  const [notiz, setNotiz] = useState(eintrag?.notiz ?? "");
   const [datum, setDatum] = useState(heute());
   const [werte, setWerte] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -754,9 +635,8 @@ function KnotenDialog({
       </div>
 
       <div className="dialog-actions" style={{ position: "sticky", bottom: 0, zIndex: 1, background: "var(--color-surface)", paddingTop: 8 }}>
-        <button className="btn btn-danger" onClick={onRemove} style={{ marginRight: "auto" }}><i className="ph ph-user-minus" />Teilnehmer entfernen</button>
         <button className="btn btn-secondary" onClick={async () => { await saveNotiz(); onChanged(); onClose(); }}>Schließen</button>
-        <button className="btn btn-primary" onClick={speichern} disabled={busy || (!hatEingabe && notiz === (eintrag.notiz ?? ""))}>
+        <button className="btn btn-primary" onClick={speichern} disabled={busy || (!hatEingabe && notiz === (eintrag?.notiz ?? ""))}>
           <i className="ph ph-check" />Speichern
         </button>
       </div>
