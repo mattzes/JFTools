@@ -88,22 +88,21 @@ export default function TrainingPage() {
         </button>
       </PageHeader>
 
-      {/* Feste Kategorie-Tabs */}
-      <div style={{ padding: "14px 18px 6px", display: "flex", gap: 8, flexWrap: "wrap" }} className="lg:px-6">
-        {TRAINING_KATEGORIEN.map((k) => (
-          <button
-            key={k.key}
-            className="ph-tag"
-            onClick={() => setAktiveKey(k.key)}
-            style={{
-              padding: "5px 12px", cursor: "pointer", border: 0,
-              background: k.key === kat.key ? "var(--color-accent-800)" : "var(--color-neutral-800)",
-              color: k.key === kat.key ? "var(--color-accent-100)" : "var(--color-neutral-300)",
-            }}
-          >
-            {k.label}
-          </button>
-        ))}
+      {/* Feste Kategorie-Umschaltung (segmentiert wie Matrix/Liste bei Terminen) */}
+      <div style={{ padding: "14px 18px 6px", overflowX: "auto" }} className="lg:px-6">
+        <div className="seg" style={{ fontSize: 12 }}>
+          {TRAINING_KATEGORIEN.map((k) => (
+            <button
+              key={k.key}
+              className="seg-opt"
+              data-on={k.key === kat.key}
+              onClick={() => setAktiveKey(k.key)}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {teilnehmer.length === 0 ? (
@@ -228,17 +227,20 @@ function ZeitTabelle({
           </tr>
         </thead>
         <tbody>
-          {sorted.map((r) => (
-            <tr key={r.e.personId} onClick={() => onOpen(r.e.personId)} style={{ cursor: "pointer" }}>
+          {sorted.map((r) => {
+            const inaktiv = r.p != null && !r.p.aktiv;
+            return (
+            <tr key={r.e.personId} onClick={() => onOpen(r.e.personId)} style={{ cursor: "pointer", opacity: inaktiv ? 0.5 : 1 }}>
               <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{rankByPerson.get(r.e.personId) ?? "—"}</td>
-              <td style={{ fontSize: 14 }}>{r.p ? personName(r.p) : "?"}</td>
+              <td style={{ fontSize: 14 }}>{r.p ? personName(r.p) : "?"}{inaktiv && <InaktivBadge />}</td>
               <td style={{ textAlign: "center" }}>{r.agg ? <b style={{ color: "var(--color-accent-200)", fontSize: 15 }}>{r.agg.best}s</b> : "—"}</td>
               <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.avg.toFixed(1)}s` : "—"}</td>
               <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.last}s` : "—"}</td>
               <td>{r.agg ? <Sparkline werte={r.agg.werte} /> : <span style={{ color: "var(--color-neutral-600)" }}>—</span>}</td>
               <td style={{ fontSize: 13, color: "var(--color-neutral-400)", maxWidth: 220 }}>{r.note || "—"}</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
 
@@ -258,10 +260,10 @@ function MobileCards({
   return (
     <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "4px 0 16px" }}>
       {rows.map((r) => (
-        <div key={r.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(r.personId)}>
+        <div key={r.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer", opacity: r.p && !r.p.aktiv ? 0.5 : 1 }} onClick={() => onOpen(r.personId)}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: "var(--color-neutral-500)" }}>{r.rank ?? "—"}</span>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{r.p ? personName(r.p) : "?"}</span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{r.p ? personName(r.p) : "?"}{r.p && !r.p.aktiv && <InaktivBadge />}</span>
             {r.agg && <Sparkline werte={r.agg.werte} w={70} h={22} />}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 9, paddingTop: 9, borderTop: "1px solid var(--color-divider)" }}>
@@ -319,13 +321,14 @@ function KnotenTabelle({
         <tbody>
           {rows.map((e) => {
             const p = personById.get(e.personId);
+            const inaktiv = p != null && !p.aktiv;
             return knoten.map((kn, i) => {
               const agg = aggFor(messungen, e.personId, disziplinIdByName.get(kn));
               return (
-                <tr key={`${e.personId}:${kn}`} onClick={() => onOpen(e.personId)} style={{ cursor: "pointer" }}>
+                <tr key={`${e.personId}:${kn}`} onClick={() => onOpen(e.personId)} style={{ cursor: "pointer", opacity: inaktiv ? 0.5 : 1 }}>
                   {i === 0 && (
                     <td rowSpan={knoten.length} style={{ fontSize: 14, fontWeight: 500, verticalAlign: "top", borderRight: "1px solid var(--color-divider)" }}>
-                      {p ? personName(p) : "?"}
+                      {p ? personName(p) : "?"}{inaktiv && <InaktivBadge />}
                       {e.notiz && <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 4, maxWidth: 160 }}><i className="ph ph-note" /> {e.notiz}</div>}
                     </td>
                   )}
@@ -345,9 +348,10 @@ function KnotenTabelle({
       <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "4px 0 16px" }}>
         {rows.map((e) => {
           const p = personById.get(e.personId);
+          const inaktiv = p != null && !p.aktiv;
           return (
-            <div key={e.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(e.personId)}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{p ? personName(p) : "?"}</div>
+            <div key={e.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer", opacity: inaktiv ? 0.5 : 1 }} onClick={() => onOpen(e.personId)}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{p ? personName(p) : "?"}{inaktiv && <InaktivBadge />}</div>
               {knoten.map((kn) => {
                 const agg = aggFor(messungen, e.personId, disziplinIdByName.get(kn));
                 return (
@@ -400,9 +404,10 @@ function StatischTabelle({
         <tbody>
           {rows.map((e) => {
             const p = personById.get(e.personId);
+            const inaktiv = p != null && !p.aktiv;
             return (
-              <tr key={e.personId}>
-                <td style={{ fontSize: 14 }}>{p ? personName(p) : "?"}</td>
+              <tr key={e.personId} style={{ opacity: inaktiv ? 0.5 : 1 }}>
+                <td style={{ fontSize: 14 }}>{p ? personName(p) : "?"}{inaktiv && <InaktivBadge />}</td>
                 <td>
                   <select
                     className="input"
@@ -431,6 +436,18 @@ function StatischTabelle({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function InaktivBadge() {
+  return (
+    <span
+      className="ph-tag"
+      title="Person ist deaktiviert"
+      style={{ marginLeft: 6, fontSize: 9.5, background: "rgba(232,110,110,.16)", color: "var(--danger)", padding: "1px 6px" }}
+    >
+      inaktiv
+    </span>
   );
 }
 

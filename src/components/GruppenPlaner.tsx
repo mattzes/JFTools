@@ -788,7 +788,7 @@ function MemberRow({ index, m, p, from, doppel, onRemove }: { index: number; m: 
       style={{
         display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 10px", borderRadius: 10,
         background: "var(--color-bg)", border: `1px solid ${doppel ? "var(--color-accent-700)" : "var(--color-divider)"}`,
-        opacity: isDragging ? 0.4 : 1,
+        opacity: isDragging ? 0.4 : p.aktiv ? 1 : 0.5,
       }}
     >
       <span style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, flex: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
@@ -803,6 +803,7 @@ function MemberRow({ index, m, p, from, doppel, onRemove }: { index: number; m: 
       >
         <i className="ph ph-dots-six-vertical" style={{ color: "var(--color-neutral-600)", fontSize: 15, flex: "none" }} />
         <span style={{ minWidth: 0, fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(p)}</span>
+        {!p.aktiv && <InaktivTag />}
       </span>
       {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 6px", flex: "none" }}>2×</span>}
       <button onClick={onRemove} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-600)", padding: 2, flex: "none" }} aria-label="Entfernen">
@@ -818,14 +819,26 @@ function MemberChip({ m, p, from, doppel, onRemove }: { m: Gruppenmitglied; p: P
     data: { personId: p.id, from },
   });
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0, opacity: p.aktiv ? 1 : 0.5 }}>
       <span ref={setNodeRef} {...listeners} {...attributes} style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "grab", opacity: isDragging ? 0.4 : 1, touchAction: "none", minWidth: 0 }}>
         <span style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(p)}</span>
         {doppel && <span style={{ fontSize: 8.5, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 4, padding: "0px 4px" }}>2×</span>}
+        {!p.aktiv && <InaktivTag />}
       </span>
       <button onClick={onRemove} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-600)", padding: 0 }} aria-label="Entfernen">
         <i className="ph ph-x" style={{ fontSize: 12 }} />
       </button>
+    </span>
+  );
+}
+
+function InaktivTag() {
+  return (
+    <span
+      title="Person ist deaktiviert"
+      style={{ flex: "none", fontSize: 8.5, fontWeight: 700, background: "rgba(232,110,110,.16)", color: "var(--danger)", borderRadius: 4, padding: "1px 5px", textTransform: "uppercase", letterSpacing: ".03em" }}
+    >
+      inaktiv
     </span>
   );
 }
