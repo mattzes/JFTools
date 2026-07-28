@@ -13,7 +13,7 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { api, Person, Planung, HindernisFaehigkeit, Gruppe, Gruppenmitglied, Termin, Verfuegbarkeit, personName } from "@/lib/api";
-import { ModeTag, PageHeader, fmtDateShort } from "@/components/ui";
+import { ModeTag, PageHeader, SortArrow, Th, fmtDateShort, useSort, sortRows } from "@/components/ui";
 import { A_TEIL_POSITIONEN, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN } from "@/lib/domain/constants";
 import { gruppenAlter, sollZeitLabel, gruppenWarnungen } from "@/lib/domain/planung";
 import { alter, alterInDiesemJahr } from "@/lib/domain/alter";
@@ -26,6 +26,8 @@ const VERF_STYLE = {
   nein: { icon: "ph-x", c: "var(--danger)" },
   offen: { icon: "ph-minus", c: "var(--color-neutral-500)" },
 } as const;
+
+const VERF_RANK = { ja: 0, nein: 1, offen: 2 } as const;
 
 const HIND_MAP = {
   ja: { icon: "ph-check-circle", c: "var(--color-accent-300)", title: "Wassergraben ok" },
@@ -338,10 +340,14 @@ function StarterPool({
   infoTermine: Termin[];
   verfByPT: Map<string, Verfuegbarkeit["status"]>;
 }) {
+  const tabellarisch = info.alter || info.jgAlter || infoTermine.length > 0;
   return (
     <div
       className="hidden md:flex"
-      style={{ width: 216, flex: "none", borderRight: "1px solid var(--color-divider)", flexDirection: "column", overflow: "hidden" }}
+      style={{
+        width: tabellarisch ? "auto" : 216, maxWidth: tabellarisch ? "56%" : undefined, flex: "none",
+        borderRight: "1px solid var(--color-divider)", flexDirection: "column", overflow: "hidden",
+      }}
     >
       <div style={{ padding: "13px 14px 9px" }}>
         <div style={{ fontSize: 13, fontWeight: 600 }}>Starter</div>
@@ -349,44 +355,164 @@ function StarterPool({
           {doppelstart ? "aus Zusagen · ziehen zum Zuteilen" : "aus Zusagen · zugeteilte ausgeblendet"}
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {starter.length === 0 && (
-          <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)", padding: "8px 4px", lineHeight: 1.5 }}>
-            Noch keine Zusagen. In <b>Termine</b> Verfügbarkeit auf „Ja" setzen.
-          </div>
-        )}
-        {starter.map((p) => {
-          const meta: React.ReactNode[] = [];
-          if (info.alter && p.geburtsdatum) meta.push(<InfoTag key="a" title="Alter">{alter(p.geburtsdatum)} J</InfoTag>);
-          if (info.jgAlter && p.geburtsdatum) meta.push(<InfoTag key="j" title="Jahrgangsalter">Jg {alterInDiesemJahr(p.geburtsdatum)}</InfoTag>);
-          for (const t of infoTermine) {
-            const st = verfByPT.get(`${p.id}:${t.id}`) ?? "offen";
-            const s = VERF_STYLE[st];
-            const d = fmtDateShort(t.datumVon);
-            meta.push(
-              <InfoTag key={`t${t.id}`} title={`${t.titel}: ${st}`}>
-                <i className={`ph-bold ${s.icon}`} style={{ color: s.c, fontSize: 10 }} />
-                {d.tag}. {d.mon}
-              </InfoTag>,
-            );
-          }
-          return (
+      {starter.length === 0 ? (
+        <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)", padding: "8px 16px", lineHeight: 1.5 }}>
+          Noch keine Zusagen. In <b>Termine</b> Verfügbarkeit auf „Ja" setzen.
+        </div>
+      ) : tabellarisch ? (
+        <div style={{ flex: 1, overflow: "auto", padding: "0 8px 12px" }}>
+          <StarterTable
+            starter={starter}
+            info={info}
+            infoTermine={infoTermine}
+            verfByPT={verfByPT}
+            hindByPerson={hindByPerson}
+            gruppenCountByPerson={gruppenCountByPerson}
+            istZugewiesen={istZugewiesen}
+          />
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+          {starter.map((p) => (
             <StarterChip
               key={p.id}
               person={p}
               hind={hindByPerson.get(p.id)}
               doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
               zugewiesen={istZugewiesen(p.id)}
-              meta={meta.length ? meta : null}
             />
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function StarterChip({ person, hind, doppel, zugewiesen, meta }: { person: Person; hind?: HindernisFaehigkeit; doppel: boolean; zugewiesen: boolean; meta?: React.ReactNode[] | null }) {
+function StarterTable({
+  starter,
+  info,
+  infoTermine,
+  verfByPT,
+  hindByPerson,
+  gruppenCountByPerson,
+  istZugewiesen,
+}: {
+  starter: Person[];
+  info: StarterInfo;
+  infoTermine: Termin[];
+  verfByPT: Map<string, Verfuegbarkeit["status"]>;
+  hindByPerson: Map<number, HindernisFaehigkeit>;
+  gruppenCountByPerson: Map<number, number>;
+  istZugewiesen: (id: number) => boolean;
+}) {
+  const { sort, toggle } = useSort();
+  const rows = sortRows(starter, sort, (p, key) => {
+    if (key === "name") return `${p.nachname} ${p.vorname}`;
+    if (key === "alter") return p.geburtsdatum ? alter(p.geburtsdatum) : null;
+    if (key === "jg") return p.geburtsdatum ? alterInDiesemJahr(p.geburtsdatum) : null;
+    if (key.startsWith("t:")) return VERF_RANK[verfByPT.get(`${p.id}:${Number(key.slice(2))}`) ?? "offen"];
+    return null;
+  });
+  return (
+    <table className="table" style={{ fontSize: 13 }}>
+      <thead>
+        <tr>
+          <Th sortKey="name" sort={sort} onSort={toggle}>Name</Th>
+          {info.alter && <Th sortKey="alter" sort={sort} onSort={toggle} align="center">Alter</Th>}
+          {info.jgAlter && <Th sortKey="jg" sort={sort} onSort={toggle} align="center">Jg-Alter</Th>}
+          {infoTermine.map((t) => {
+            const aktiv = sort?.key === `t:${t.id}`;
+            return (
+              <th
+                key={t.id}
+                onClick={() => toggle(`t:${t.id}`)}
+                title={`${t.titel} — Klicken zum Sortieren`}
+                style={{ textAlign: "center", cursor: "pointer", userSelect: "none", maxWidth: 130 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                  <span style={{ whiteSpace: "normal", lineHeight: 1.15, textTransform: "none", letterSpacing: 0 }}>{t.titel}</span>
+                  <SortArrow dir={aktiv ? sort!.dir : null} />
+                </div>
+              </th>
+            );
+          })}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((p) => (
+          <StarterRow
+            key={p.id}
+            person={p}
+            info={info}
+            infoTermine={infoTermine}
+            verfByPT={verfByPT}
+            hind={hindByPerson.get(p.id)}
+            doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
+            zugewiesen={istZugewiesen(p.id)}
+          />
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function StarterRow({
+  person,
+  info,
+  infoTermine,
+  verfByPT,
+  hind,
+  doppel,
+  zugewiesen,
+}: {
+  person: Person;
+  info: StarterInfo;
+  infoTermine: Termin[];
+  verfByPT: Map<string, Verfuegbarkeit["status"]>;
+  hind?: HindernisFaehigkeit;
+  doppel: boolean;
+  zugewiesen: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `pool-${person.id}`,
+    data: { personId: person.id, from: "pool" },
+  });
+  const h = hind ? HIND_MAP[hind.status] : null;
+  return (
+    <tr
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      title={!zugewiesen ? "noch keiner Gruppe zugewiesen — ziehen zum Zuteilen" : "ziehen zum Zuteilen"}
+      style={{
+        cursor: "grab", opacity: isDragging ? 0.4 : 1, touchAction: "none",
+        background: !zugewiesen ? "color-mix(in srgb, var(--warn) 9%, transparent)" : undefined,
+      }}
+    >
+      <td>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          <i className="ph ph-dots-six-vertical" style={{ color: "var(--color-neutral-600)", fontSize: 14, flex: "none" }} />
+          <span style={{ whiteSpace: "nowrap", fontWeight: 500 }}>{personName(person)}</span>
+          {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 5px", flex: "none" }}>2×</span>}
+          {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 14, flex: "none" }} title={h.title} />}
+        </span>
+      </td>
+      {info.alter && <td style={{ textAlign: "center" }}>{person.geburtsdatum ? alter(person.geburtsdatum) : "—"}</td>}
+      {info.jgAlter && <td style={{ textAlign: "center" }}>{person.geburtsdatum ? alterInDiesemJahr(person.geburtsdatum) : "—"}</td>}
+      {infoTermine.map((t) => {
+        const st = verfByPT.get(`${person.id}:${t.id}`) ?? "offen";
+        const s = VERF_STYLE[st];
+        return (
+          <td key={t.id} style={{ textAlign: "center" }} title={`${t.titel}: ${st}`}>
+            <i className={`ph-bold ${s.icon}`} style={{ color: s.c, fontSize: 14 }} />
+          </td>
+        );
+      })}
+    </tr>
+  );
+}
+
+function StarterChip({ person, hind, doppel, zugewiesen }: { person: Person; hind?: HindernisFaehigkeit; doppel: boolean; zugewiesen: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `pool-${person.id}`,
     data: { personId: person.id, from: "pool" },
@@ -400,34 +526,16 @@ function StarterChip({ person, hind, doppel, zugewiesen, meta }: { person: Perso
       {...attributes}
       title={!zugewiesen ? "noch keiner Gruppe zugewiesen" : undefined}
       style={{
-        display: "flex", flexDirection: "column", gap: 5, padding: "7px 9px", borderRadius: 9,
+        display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", borderRadius: 9,
         background: !zugewiesen ? "color-mix(in srgb, var(--warn) 10%, var(--color-bg))" : "var(--color-bg)",
         border: `1px solid ${borderColor}`,
         cursor: "grab", opacity: isDragging ? 0.4 : 1, touchAction: "none",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(person)}</div>
-        {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 5px" }}>2×</span>}
-        {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 14 }} title={h.title} />}
-      </div>
-      {meta && <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{meta}</div>}
+      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(person)}</div>
+      {doppel && <span style={{ fontSize: 9, fontWeight: 700, background: "var(--color-accent)", color: "#0d0e15", borderRadius: 5, padding: "1px 5px" }}>2×</span>}
+      {h && <i className={`ph ${h.icon}`} style={{ color: h.c, fontSize: 14 }} title={h.title} />}
     </div>
-  );
-}
-
-function InfoTag({ children, title }: { children: React.ReactNode; title?: string }) {
-  return (
-    <span
-      title={title}
-      style={{
-        display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 500,
-        background: "var(--color-neutral-800)", color: "var(--color-neutral-300)",
-        borderRadius: 5, padding: "1px 5px", whiteSpace: "nowrap",
-      }}
-    >
-      {children}
-    </span>
   );
 }
 
