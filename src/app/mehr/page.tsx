@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { PageHeader } from "@/components/ui";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const LINKS = [
   { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Rückmeldungen", sub: "Zettel & Einverständnis" },
@@ -11,6 +12,7 @@ const LINKS = [
 ];
 
 export default function MehrPage() {
+  const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -75,10 +77,10 @@ export default function MehrPage() {
           type="file"
           accept="application/json"
           style={{ display: "none" }}
-          onChange={(e) => {
+          onChange={async (e) => {
             const f = e.target.files?.[0];
-            if (f && confirm("Der aktuelle Datenbestand wird komplett ersetzt. Fortfahren?")) importBackup(f);
             e.target.value = "";
+            if (f && (await confirm({ title: "Backup einspielen", message: "Der aktuelle Datenbestand wird komplett ersetzt. Fortfahren?", confirmLabel: "Ersetzen", danger: false }))) importBackup(f);
           }}
         />
         {msg && <div style={{ fontSize: 12.5, color: msg.startsWith("Import fehl") ? "var(--danger)" : "var(--color-accent-300)", padding: "0 4px" }}>{msg}</div>}

@@ -5,6 +5,7 @@ import { api, useApi, Person, Termin, Verfuegbarkeit, personName } from "@/lib/a
 import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, SortArrow, Th, fmtDate, fmtDateShort, useSort, sortRows } from "@/components/ui";
 import { PLANUNGSMODI, ZIELGRUPPEN, Planungsmodus, Zielgruppe } from "@/lib/domain/constants";
 import { useStoredState } from "@/lib/useStoredState";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const STATUS_CELL = {
   ja: { icon: "ph-check", c: "var(--color-accent-300)", bg: "var(--color-accent-900)" },
@@ -44,6 +45,7 @@ export default function TerminePage() {
   const { data: personen } = useApi<Person[]>("/personen");
   const { data: termine, reload } = useApi<Termin[]>("/termine");
   const { data: verf, reload: reloadVerf } = useApi<Verfuegbarkeit[]>("/verfuegbarkeiten");
+  const confirm = useConfirm();
   const [ansichtRaw, setAnsichtRaw] = useStoredState("termine.ansicht", "matrix");
   const ansicht: "matrix" | "liste" = ansichtRaw === "liste" ? "liste" : "matrix";
   const setAnsicht = (v: "matrix" | "liste") => setAnsichtRaw(v);
@@ -209,7 +211,7 @@ export default function TerminePage() {
                 className="btn btn-danger"
                 style={{ marginRight: "auto" }}
                 onClick={async () => {
-                  if (confirm("Diesen Termin wirklich löschen? Verfügbarkeiten und Planung gehen verloren.")) {
+                  if (await confirm({ title: "Termin löschen", message: "Diesen Termin wirklich löschen? Verfügbarkeiten und Planung gehen verloren.", confirmLabel: "Löschen" })) {
                     await api(`/termine/${form.id}`, { method: "DELETE" });
                     setForm(null);
                     reload();

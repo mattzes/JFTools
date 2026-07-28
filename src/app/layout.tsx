@@ -5,6 +5,7 @@ import "@phosphor-icons/web/fill";
 import "@phosphor-icons/web/bold";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmProvider } from "@/components/ConfirmProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de">
       <body className={inter.variable}>
-        <AppShell>{children}</AppShell>
+        <ConfirmProvider>
+          <AppShell>{children}</AppShell>
+        </ConfirmProvider>
       </body>
     </html>
   );

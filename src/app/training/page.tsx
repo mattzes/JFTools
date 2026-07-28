@@ -12,6 +12,7 @@ import {
   LEINBEUTEL_LABELS,
 } from "@/lib/domain/constants";
 import { useStoredState } from "@/lib/useStoredState";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const heute = () => new Date().toISOString().slice(0, 10);
 
@@ -517,6 +518,7 @@ function LeinbeutelDialog({
   const [datum, setDatum] = useState(heute());
   const [ergebnis, setErgebnis] = useState<string>(LEINBEUTEL_WERTE[0]);
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
 
   const wuerfe = messungen
     .filter((m) => m.personId === person.id && m.disziplinId === disziplinId && m.wertText != null)
@@ -542,6 +544,7 @@ function LeinbeutelDialog({
   }
 
   async function del(id: number) {
+    if (!(await confirm({ title: "Wurf löschen", message: "Diesen Wurf wirklich löschen?", confirmLabel: "Löschen" }))) return;
     await api(`/messungen/${id}`, { method: "DELETE" });
     onChanged();
   }
@@ -654,6 +657,7 @@ function ZeitDialog({
   const [datum, setDatum] = useState(heute());
   const [wert, setWert] = useState("");
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
 
   const eintraege = messungen
     .filter((m) => m.personId === person.id && m.disziplinId === disziplinId && m.wertSekunden != null)
@@ -681,6 +685,7 @@ function ZeitDialog({
   }
 
   async function del(id: number) {
+    if (!(await confirm({ title: "Zeit löschen", message: "Diese Zeit wirklich löschen?", confirmLabel: "Löschen" }))) return;
     await api(`/messungen/${id}`, { method: "DELETE" });
     onChanged();
   }
@@ -760,6 +765,7 @@ function KnotenDialog({
   const [datum, setDatum] = useState(heute());
   const [werte, setWerte] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
 
   async function saveNotiz() {
     await api("/training-eintraege", {
@@ -787,6 +793,7 @@ function KnotenDialog({
   }
 
   async function del(id: number) {
+    if (!(await confirm({ title: "Zeit löschen", message: "Diese Zeit wirklich löschen?", confirmLabel: "Löschen" }))) return;
     await api(`/messungen/${id}`, { method: "DELETE" });
     onChanged();
   }

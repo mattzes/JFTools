@@ -14,6 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { api, Person, Planung, Gruppe, Gruppenmitglied, Termin, Verfuegbarkeit, personName } from "@/lib/api";
 import { ModeTag, PageHeader, SortArrow, Th, fmtDateShort, useSort, sortRows } from "@/components/ui";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { A_TEIL_POSITIONEN, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN } from "@/lib/domain/constants";
 import { gruppenAlter, sollZeitLabel, gruppenWarnungen } from "@/lib/domain/planung";
 import { alter, alterInDiesemJahr } from "@/lib/domain/alter";
@@ -42,6 +43,7 @@ export function GruppenPlaner({
   alleVerf: Verfuegbarkeit[];
   reload: () => void;
 }) {
+  const confirm = useConfirm();
   const { termin } = planung;
   const modus = termin.planungsmodus;
   const istATeil = modus === "a_teil" || modus === "a_und_b_teil";
@@ -125,7 +127,8 @@ export function GruppenPlaner({
   }
 
   async function deleteGruppe(id: number) {
-    if (!confirm("Gruppe löschen?")) return;
+    const g = planung.gruppen.find((x) => x.id === id);
+    if (!(await confirm({ title: "Gruppe löschen", message: `Gruppe „${g?.name ?? ""}" wirklich löschen? Die Zuordnung der Mitglieder geht verloren.`, confirmLabel: "Löschen" }))) return;
     await api(`/gruppen/${id}`, { method: "DELETE" });
     reload();
   }
@@ -296,6 +299,9 @@ export function GruppenPlaner({
                     istBTeil={istBTeil}
                     onDelete={() => deleteGruppe(g.id)}
                     onRemoveMember={async (mid) => {
+                      const mm = planung.mitglieder.find((x) => x.id === mid);
+                      const mp = mm ? personById.get(mm.personId) : null;
+                      if (!(await confirm({ title: "Aus Gruppe entfernen", message: `${mp ? personName(mp) : "Diese Person"} aus „${g.name}" entfernen?`, confirmLabel: "Entfernen" }))) return;
                       await api(`/gruppenmitglieder/${mid}`, { method: "DELETE" });
                       reload();
                     }}
