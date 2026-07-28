@@ -142,6 +142,14 @@ export default function PersonenPage() {
   return (
     <>
       <PageHeader title="Personen" sub={`${jugend} Jugendliche · ${betr} Betreuer`}>
+        <button
+          className={`btn ${zeigeInaktive ? "btn-primary" : "btn-secondary"}`}
+          onClick={() => setZeigeInaktive((v) => !v)}
+          title="Inaktive Personen ein- oder ausblenden"
+        >
+          <i className={`ph ${zeigeInaktive ? "ph-eye" : "ph-eye-slash"}`} />
+          Inaktive anzeigen
+        </button>
         <input
           className="input"
           style={{ width: 180 }}
@@ -263,11 +271,6 @@ export default function PersonenPage() {
                   </button>
                 ))}
               </div>
-
-              <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 8px", fontSize: 12, color: "var(--color-neutral-500)", cursor: "pointer" }}>
-                <input type="checkbox" checked={zeigeInaktive} onChange={(e) => setZeigeInaktive(e.target.checked)} />
-                Inaktive anzeigen
-              </label>
             </>
           )}
         </div>
