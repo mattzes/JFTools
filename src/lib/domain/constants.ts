@@ -85,6 +85,7 @@ export const DISZIPLINEN_SEED = [
   "Schlauchrollen",
   "Tunnel",
   "Anziehen",
+  "Leinbeutelwerfen",
   ...KNOTEN,
 ];
 
@@ -93,7 +94,7 @@ export const DISZIPLINEN_SEED = [
 //   zeit         → Zeit-Tabelle (Best/Ø/Letzte/Verlauf), Notiz pro Person
 //   knoten       → 4 Unterzeilen pro Person (die 4 Knoten), Notiz pro Person
 //   wassergraben → statische Einzelauswahl pro Person
-//   leinbeutel   → statische Einzelauswahl pro Person
+//   leinbeutel   → Mehrfach-Würfe (Ergebnis je Wurf) + Trefferstatistik
 export type TrainingKind = "zeit" | "knoten" | "wassergraben" | "leinbeutel";
 export type TrainingKategorie = {
   key: string;
@@ -109,7 +110,7 @@ export const TRAINING_KATEGORIEN: readonly TrainingKategorie[] = [
   { key: "schlauchrollen", label: "Schlauchrollen", kind: "zeit", disziplin: "Schlauchrollen" },
   { key: "tunnel", label: "Tunnel", kind: "zeit", disziplin: "Tunnel" },
   { key: "anziehen", label: "Anziehen", kind: "zeit", disziplin: "Anziehen" },
-  { key: "leinbeutel", label: "Leinbeutelwerfen", kind: "leinbeutel" },
+  { key: "leinbeutel", label: "Leinbeutelwerfen", kind: "leinbeutel", disziplin: "Leinbeutelwerfen" },
   { key: "knoten", label: "Knoten", kind: "knoten", disziplinen: KNOTEN },
 ];
 

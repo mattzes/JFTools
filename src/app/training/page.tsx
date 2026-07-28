@@ -118,7 +118,7 @@ export default function TrainingPage() {
               onOpen={setDetailPerson}
             />
           )}
-          {(kat.kind === "wassergraben" || kat.kind === "leinbeutel") && (
+          {kat.kind === "wassergraben" && (
             <StatischTabelle
               kat={kat}
               personen={jugendliche}
@@ -126,9 +126,29 @@ export default function TrainingPage() {
               onSetWert={setWert}
             />
           )}
+          {kat.kind === "leinbeutel" && (
+            <LeinbeutelTabelle
+              personen={jugendliche}
+              eintragByPerson={eintragByPerson}
+              messungen={messungen}
+              disziplinId={kat.disziplin ? disziplinIdByName.get(kat.disziplin) : undefined}
+              onOpen={setDetailPerson}
+            />
+          )}
         </div>
       )}
 
+      {detailPersonObj && kat.kind === "leinbeutel" && (
+        <LeinbeutelDialog
+          kat={kat}
+          eintrag={detailEintrag}
+          person={detailPersonObj}
+          messungen={messungen}
+          disziplinId={kat.disziplin ? disziplinIdByName.get(kat.disziplin) : undefined}
+          onClose={() => setDetailPerson(null)}
+          onChanged={reloadAll}
+        />
+      )}
       {detailPersonObj && kat.kind === "zeit" && (
         <ZeitDialog
           kat={kat}
@@ -401,6 +421,198 @@ function StatischTabelle({
         </tbody>
       </table>
     </div>
+  );
+}
+
+// ── Leinbeutelwerfen: Mehrfach-Würfe + Trefferstatistik ──
+type LbStats = { total: number; treffer: number; zuKurz: number; vorbei: number; quote: number | null };
+function leinbeutelStats(messungen: Messung[], personId: number, disziplinId: number | undefined): LbStats {
+  if (disziplinId == null) return { total: 0, treffer: 0, zuKurz: 0, vorbei: 0, quote: null };
+  const ms = messungen.filter((m) => m.personId === personId && m.disziplinId === disziplinId && m.wertText != null);
+  const total = ms.length;
+  const treffer = ms.filter((m) => m.wertText === "getroffen").length;
+  const zuKurz = ms.filter((m) => m.wertText === "zu_kurz").length;
+  const vorbei = ms.filter((m) => m.wertText === "vorbeigeworfen").length;
+  return { total, treffer, zuKurz, vorbei, quote: total ? treffer / total : null };
+}
+
+function LeinbeutelTabelle({
+  personen,
+  eintragByPerson,
+  messungen,
+  disziplinId,
+  onOpen,
+}: {
+  personen: Person[];
+  eintragByPerson: Map<number, TrainingEintrag>;
+  messungen: Messung[];
+  disziplinId: number | undefined;
+  onOpen: (personId: number) => void;
+}) {
+  const { sort, toggle } = useSort();
+  const rows = personen.map((p) => ({ p, stats: leinbeutelStats(messungen, p.id, disziplinId), note: eintragByPerson.get(p.id)?.notiz ?? null }));
+  const sorted = sortRows(rows, sort, (r, key) => {
+    switch (key) {
+      case "person": return `${r.p.nachname} ${r.p.vorname}`;
+      case "wuerfe": return r.stats.total || null;
+      case "treffer": return r.stats.treffer || null;
+      case "zukurz": return r.stats.zuKurz || null;
+      case "vorbei": return r.stats.vorbei || null;
+      case "quote": return r.stats.quote;
+      case "notiz": return r.note ?? null;
+      default: return null;
+    }
+  });
+  const pct = (q: number | null) => (q == null ? "—" : `${Math.round(q * 100)} %`);
+  return (
+    <div style={{ padding: "0 18px" }}>
+      <table className="table">
+        <thead>
+          <tr>
+            <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
+            <Th sortKey="wuerfe" sort={sort} onSort={toggle} align="center">Würfe</Th>
+            <Th sortKey="treffer" sort={sort} onSort={toggle} align="center">Treffer</Th>
+            <Th sortKey="zukurz" sort={sort} onSort={toggle} align="center">zu kurz</Th>
+            <Th sortKey="vorbei" sort={sort} onSort={toggle} align="center">vorbei</Th>
+            <Th sortKey="quote" sort={sort} onSort={toggle} align="center">Quote</Th>
+            <Th sortKey="notiz" sort={sort} onSort={toggle}>Notiz</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((r) => (
+            <tr key={r.p.id} onClick={() => onOpen(r.p.id)} style={{ cursor: "pointer" }}>
+              <td style={{ fontSize: 14 }}>{personName(r.p)}</td>
+              <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total || "—"}</td>
+              <td style={{ textAlign: "center" }}>{r.stats.total ? <b style={{ color: "var(--color-accent-200)" }}>{r.stats.treffer}</b> : "—"}</td>
+              <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total ? r.stats.zuKurz : "—"}</td>
+              <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total ? r.stats.vorbei : "—"}</td>
+              <td style={{ textAlign: "center", fontWeight: 600 }}>{pct(r.stats.quote)}</td>
+              <td style={{ fontSize: 13, color: "var(--color-neutral-400)", maxWidth: 200 }}>{r.note || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function LeinbeutelDialog({
+  kat,
+  eintrag,
+  person,
+  messungen,
+  disziplinId,
+  onClose,
+  onChanged,
+}: {
+  kat: TrainingKategorie;
+  eintrag: TrainingEintrag | undefined;
+  person: Person;
+  messungen: Messung[];
+  disziplinId: number | undefined;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [notiz, setNotiz] = useState(eintrag?.notiz ?? "");
+  const [datum, setDatum] = useState(heute());
+  const [ergebnis, setErgebnis] = useState<string>(LEINBEUTEL_WERTE[0]);
+  const [busy, setBusy] = useState(false);
+
+  const wuerfe = messungen
+    .filter((m) => m.personId === person.id && m.disziplinId === disziplinId && m.wertText != null)
+    .sort((a, b) => b.datum.localeCompare(a.datum));
+  const stats = leinbeutelStats(messungen, person.id, disziplinId);
+
+  async function saveNotiz() {
+    await api("/training-eintraege", {
+      method: "PUT",
+      body: JSON.stringify({ personId: person.id, kategorie: kat.key, notiz: notiz || null, wert: null }),
+    });
+  }
+
+  async function addWurf() {
+    if (disziplinId == null) return;
+    setBusy(true);
+    await api("/messungen", {
+      method: "POST",
+      body: JSON.stringify({ personId: person.id, disziplinId, datum, wertSekunden: null, wertText: ergebnis, notiz: null }),
+    });
+    setBusy(false);
+    onChanged();
+  }
+
+  async function del(id: number) {
+    await api(`/messungen/${id}`, { method: "DELETE" });
+    onChanged();
+  }
+
+  return (
+    <Dialog title={`${personName(person)} — Leinbeutelwerfen`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)", display: "flex", flexDirection: "column", gap: 12, paddingBottom: 4 }}>
+        {stats.total > 0 && (
+          <div style={{ display: "flex", gap: 18 }}>
+            <div><div style={{ font: "600 18px/1 var(--font-heading)", color: "var(--color-accent-200)" }}>{stats.treffer}/{stats.total}</div><div style={{ fontSize: 11, color: "var(--color-neutral-500)" }}>Treffer</div></div>
+            <div><div style={{ font: "600 18px/1 var(--font-heading)" }}>{stats.quote != null ? `${Math.round(stats.quote * 100)} %` : "—"}</div><div style={{ fontSize: 11, color: "var(--color-neutral-500)" }}>Quote</div></div>
+            <div><div style={{ font: "600 18px/1 var(--font-heading)" }}>{stats.zuKurz}·{stats.vorbei}</div><div style={{ fontSize: 11, color: "var(--color-neutral-500)" }}>zu kurz · vorbei</div></div>
+          </div>
+        )}
+        <div className="field">
+          <label>Notiz (pro Person)</label>
+          <textarea className="input" value={notiz} onChange={(e) => setNotiz(e.target.value)} onBlur={saveNotiz} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="field">
+            <label>Datum</label>
+            <DatePicker value={datum} onChange={setDatum} clearable={false} />
+          </div>
+          <div className="field">
+            <label>Ergebnis</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <select className="input" value={ergebnis} onChange={(e) => setErgebnis(e.target.value)}>
+                {LEINBEUTEL_WERTE.map((w) => (
+                  <option key={w} value={w}>{LEINBEUTEL_LABELS[w]}</option>
+                ))}
+              </select>
+              <button className="btn btn-primary" onClick={addWurf} disabled={busy || disziplinId == null}><i className="ph ph-plus" /></button>
+            </div>
+          </div>
+        </div>
+        {disziplinId == null && (
+          <div style={{ fontSize: 11.5, color: "var(--warn)" }}>
+            <i className="ph ph-warning" /> Disziplin „Leinbeutelwerfen" nicht gefunden — bitte Seite neu laden.
+          </div>
+        )}
+      </div>
+
+      {wuerfe.length > 0 && (
+        <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
+          <table className="table" style={{ marginTop: 4 }}>
+            <thead>
+              <tr><th>Datum</th><th>Ergebnis</th><th style={{ width: 40 }} /></tr>
+            </thead>
+            <tbody>
+              {wuerfe.map((m) => (
+                <tr key={m.id}>
+                  <td style={{ whiteSpace: "nowrap" }}>{fmtDatum(m.datum)}</td>
+                  <td style={{ color: m.wertText === "getroffen" ? "var(--color-accent-200)" : "var(--color-neutral-300)" }}>
+                    {LEINBEUTEL_LABELS[m.wertText as keyof typeof LEINBEUTEL_LABELS] ?? m.wertText}
+                  </td>
+                  <td style={{ textAlign: "center" }}>
+                    <button title="Wurf löschen" onClick={() => del(m.id)} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-500)", padding: 4 }}>
+                      <i className="ph ph-trash" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="dialog-actions" style={{ position: "sticky", bottom: 0, zIndex: 1, background: "var(--color-surface)", paddingTop: 8 }}>
+        <button className="btn btn-secondary" onClick={async () => { await saveNotiz(); onChanged(); onClose(); }}>Schließen</button>
+      </div>
+    </Dialog>
   );
 }
 
