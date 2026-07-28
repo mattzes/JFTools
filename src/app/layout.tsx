@@ -9,10 +9,11 @@ import { AppShell } from "@/components/AppShell";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "JF Rottorf — Verwaltung",
+  title: "JF Verwaltung",
   description: "Jugendfeuerwehr-Verwaltung & Wettbewerbs-Gruppenplanung",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "JF Rottorf" },
+  icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "JF Verwaltung" },
 };
 
 export const viewport: Viewport = {

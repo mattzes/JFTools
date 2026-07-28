@@ -126,7 +126,7 @@ const TERMINE_SEED: Array<[string, string, string | null, string, string]> = [
   ["O-Marsch Handorf", "2026-05-01", null, "nur_gruppen", "alle"],
   ["Pokalwettbewerb Laßrönne", "2026-05-10", null, "a_und_b_teil", "alle"],
   ["KJF-Tag", "2026-05-31", null, "a_und_b_teil", "alle"],
-  ["SJF-Tag in Rottorf", "2026-06-13", null, "a_und_b_teil", "alle"],
+  ["SJF-Tag", "2026-06-13", null, "a_und_b_teil", "alle"],
   ["Bezirksentscheid", "2026-06-13", "2026-06-14", "a_und_b_teil", "alle"],
   ["Landesentscheid", "2026-06-26", "2026-06-28", "a_und_b_teil", "alle"],
   ["Kreiszeltlager", "2026-07-17", "2026-07-26", "nur_gruppen", "alle"],

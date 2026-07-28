@@ -1,7 +1,7 @@
 # Spezifikation: Jugendfeuerwehr-Verwaltung & Wettbewerbs-Gruppenplanung
 
 > Ablösung einer Excel-Arbeitsmappe („Mitglieder und Gruppen – Gruppenbildung") durch eine moderne Anwendung.
-> Zielgruppe: Jugendfeuerwehrwarte/Betreuer der JF Rottorf (Landkreis Harburg, Niedersachsen).
+> Zielgruppe: Jugendfeuerwehrwarte/Betreuer einer Jugendfeuerwehr.
 > Dieses Dokument ist die Grundlage für Claude Code. Es beschreibt Ist-Zustand (Excel), Domänenmodell, Geschäftsregeln, Features und offene Entscheidungen.
 
 ---
@@ -133,7 +133,7 @@ Termine 2026 aus der Excel (als Seed-/Beispieldaten):
 | 01.05.26 | O-Marsch Handorf | nur_gruppen | alle |
 | 10.05.26 | Pokalwettbewerb Laßrönne | a_und_b_teil | alle |
 | 31.05.26 | KJF-Tag | a_und_b_teil | alle |
-| 13.06.26 | SJF-Tag in Rottorf | a_und_b_teil | alle |
+| 13.06.26 | SJF-Tag | a_und_b_teil | alle |
 | 13.–14.06.26 | Bezirksentscheid | a_und_b_teil | alle |
 | 26.–28.06.26 | Landesentscheid | a_und_b_teil | alle |
 | (Zeitraum) | Kreiszeltlager | nur_gruppen | alle |

@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "JF Rottorf — Verwaltung",
-    short_name: "JF Rottorf",
+    name: "JF Verwaltung",
+    short_name: "JF Verwaltung",
     description: "Jugendfeuerwehr-Verwaltung & Wettbewerbs-Gruppenplanung",
     start_url: "/",
     display: "standalone",

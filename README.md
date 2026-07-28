@@ -1,6 +1,6 @@
-# JF Rottorf — Jugendfeuerwehr-Verwaltung
+# JF Verwaltung — Jugendfeuerwehr-Verwaltung
 
-Ablösung der Excel-Arbeitsmappe der Jugendfeuerwehr Rottorf durch eine lokale Web-App:
+Ablösung der Excel-Arbeitsmappe der Jugendfeuerwehr durch eine lokale Web-App:
 Personen- und Betreuerverwaltung, Terminverwaltung mit Verfügbarkeits-Matrix,
 Rückmeldungs-Tracking, Abzeichen-Fälligkeiten, Wettbewerbs-Gruppenplaner
 (A-Teil + B-Teil per Drag & Drop), Zeltlager-Einteilung, Trainingszeiten und JSON-Backup.
