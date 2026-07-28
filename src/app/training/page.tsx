@@ -41,9 +41,10 @@ export default function TrainingPage() {
   const personById = useMemo(() => new Map((personen ?? []).map((p) => [p.id, p])), [personen]);
   const disziplinIdByName = useMemo(() => new Map((disziplinen ?? []).map((d) => [d.name, d.id])), [disziplinen]);
 
+  // Nur Teilnehmer, deren Person noch aktiv ist (deaktivierte werden hier nicht angezeigt)
   const teilnehmer = useMemo(
-    () => (eintraege ?? []).filter((e) => e.kategorie === kat.key),
-    [eintraege, kat.key],
+    () => (eintraege ?? []).filter((e) => e.kategorie === kat.key && personById.get(e.personId)?.aktiv),
+    [eintraege, kat.key, personById],
   );
   const eintragByPerson = useMemo(() => new Map(teilnehmer.map((e) => [e.personId, e])), [teilnehmer]);
 
@@ -227,20 +228,17 @@ function ZeitTabelle({
           </tr>
         </thead>
         <tbody>
-          {sorted.map((r) => {
-            const inaktiv = r.p != null && !r.p.aktiv;
-            return (
-            <tr key={r.e.personId} onClick={() => onOpen(r.e.personId)} style={{ cursor: "pointer", opacity: inaktiv ? 0.5 : 1 }}>
+          {sorted.map((r) => (
+            <tr key={r.e.personId} onClick={() => onOpen(r.e.personId)} style={{ cursor: "pointer" }}>
               <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{rankByPerson.get(r.e.personId) ?? "—"}</td>
-              <td style={{ fontSize: 14 }}>{r.p ? personName(r.p) : "?"}{inaktiv && <InaktivBadge />}</td>
+              <td style={{ fontSize: 14 }}>{r.p ? personName(r.p) : "?"}</td>
               <td style={{ textAlign: "center" }}>{r.agg ? <b style={{ color: "var(--color-accent-200)", fontSize: 15 }}>{r.agg.best}s</b> : "—"}</td>
               <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.avg.toFixed(1)}s` : "—"}</td>
               <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.last}s` : "—"}</td>
               <td>{r.agg ? <Sparkline werte={r.agg.werte} /> : <span style={{ color: "var(--color-neutral-600)" }}>—</span>}</td>
               <td style={{ fontSize: 13, color: "var(--color-neutral-400)", maxWidth: 220 }}>{r.note || "—"}</td>
             </tr>
-            );
-          })}
+          ))}
         </tbody>
       </table>
 
@@ -260,10 +258,10 @@ function MobileCards({
   return (
     <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "4px 0 16px" }}>
       {rows.map((r) => (
-        <div key={r.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer", opacity: r.p && !r.p.aktiv ? 0.5 : 1 }} onClick={() => onOpen(r.personId)}>
+        <div key={r.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(r.personId)}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <span style={{ width: 16, fontSize: 11, fontWeight: 700, color: "var(--color-neutral-500)" }}>{r.rank ?? "—"}</span>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{r.p ? personName(r.p) : "?"}{r.p && !r.p.aktiv && <InaktivBadge />}</span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{r.p ? personName(r.p) : "?"}</span>
             {r.agg && <Sparkline werte={r.agg.werte} w={70} h={22} />}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 9, paddingTop: 9, borderTop: "1px solid var(--color-divider)" }}>
@@ -321,14 +319,13 @@ function KnotenTabelle({
         <tbody>
           {rows.map((e) => {
             const p = personById.get(e.personId);
-            const inaktiv = p != null && !p.aktiv;
             return knoten.map((kn, i) => {
               const agg = aggFor(messungen, e.personId, disziplinIdByName.get(kn));
               return (
-                <tr key={`${e.personId}:${kn}`} onClick={() => onOpen(e.personId)} style={{ cursor: "pointer", opacity: inaktiv ? 0.5 : 1 }}>
+                <tr key={`${e.personId}:${kn}`} onClick={() => onOpen(e.personId)} style={{ cursor: "pointer" }}>
                   {i === 0 && (
                     <td rowSpan={knoten.length} style={{ fontSize: 14, fontWeight: 500, verticalAlign: "top", borderRight: "1px solid var(--color-divider)" }}>
-                      {p ? personName(p) : "?"}{inaktiv && <InaktivBadge />}
+                      {p ? personName(p) : "?"}
                       {e.notiz && <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 4, maxWidth: 160 }}><i className="ph ph-note" /> {e.notiz}</div>}
                     </td>
                   )}
@@ -348,10 +345,9 @@ function KnotenTabelle({
       <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "4px 0 16px" }}>
         {rows.map((e) => {
           const p = personById.get(e.personId);
-          const inaktiv = p != null && !p.aktiv;
           return (
-            <div key={e.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer", opacity: inaktiv ? 0.5 : 1 }} onClick={() => onOpen(e.personId)}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{p ? personName(p) : "?"}{inaktiv && <InaktivBadge />}</div>
+            <div key={e.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(e.personId)}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{p ? personName(p) : "?"}</div>
               {knoten.map((kn) => {
                 const agg = aggFor(messungen, e.personId, disziplinIdByName.get(kn));
                 return (
@@ -404,10 +400,9 @@ function StatischTabelle({
         <tbody>
           {rows.map((e) => {
             const p = personById.get(e.personId);
-            const inaktiv = p != null && !p.aktiv;
             return (
-              <tr key={e.personId} style={{ opacity: inaktiv ? 0.5 : 1 }}>
-                <td style={{ fontSize: 14 }}>{p ? personName(p) : "?"}{inaktiv && <InaktivBadge />}</td>
+              <tr key={e.personId}>
+                <td style={{ fontSize: 14 }}>{p ? personName(p) : "?"}</td>
                 <td>
                   <select
                     className="input"
@@ -436,18 +431,6 @@ function StatischTabelle({
         </tbody>
       </table>
     </div>
-  );
-}
-
-function InaktivBadge() {
-  return (
-    <span
-      className="ph-tag"
-      title="Person ist deaktiviert"
-      style={{ marginLeft: 6, fontSize: 9.5, background: "rgba(232,110,110,.16)", color: "var(--danger)", padding: "1px 6px" }}
-    >
-      inaktiv
-    </span>
   );
 }
 
