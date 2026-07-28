@@ -46,6 +46,7 @@ export function GruppenPlaner({
   const modus = termin.planungsmodus;
   const istATeil = modus === "a_teil" || modus === "a_und_b_teil";
   const istBTeil = modus === "a_und_b_teil";
+  const istNurGruppen = modus === "nur_gruppen";
   const doppelstart = termin.doppelstartErlaubt;
 
   const [activePerson, setActivePerson] = useState<{ personId: number; from: "pool" | number } | null>(null);
@@ -76,9 +77,14 @@ export function GruppenPlaner({
     return m;
   }, [planung.knoten]);
 
-  // Starterliste = alle mit Zusage für den Termin
+  // Starterliste = Jugendliche mit Zusage. Betreuer werden getrennt geführt und
+  // nur im „nur_gruppen"-Modus (Zeltlager) berücksichtigt.
   const starter = useMemo(
-    () => personen.filter((p) => p.aktiv && verfByPerson.get(p.id) === "ja").sort((a, b) => a.nachname.localeCompare(b.nachname)),
+    () => personen.filter((p) => p.aktiv && p.rolle === "jugendlich" && verfByPerson.get(p.id) === "ja").sort((a, b) => a.nachname.localeCompare(b.nachname)),
+    [personen, verfByPerson],
+  );
+  const betreuerStarter = useMemo(
+    () => personen.filter((p) => p.aktiv && p.rolle === "betreuer" && verfByPerson.get(p.id) === "ja").sort((a, b) => a.nachname.localeCompare(b.nachname)),
     [personen, verfByPerson],
   );
   // Doppelstarter: in mehr als einer Gruppe dieses Wettbewerbs
@@ -101,6 +107,11 @@ export function GruppenPlaner({
 
   // Ohne Doppelstart verschwinden bereits zugeteilte Starter aus der Liste links
   const pool = doppelstart ? starter : starter.filter((p) => !istZugewiesen(p.id));
+  const betreuerPool = !istNurGruppen
+    ? []
+    : doppelstart
+      ? betreuerStarter
+      : betreuerStarter.filter((p) => !istZugewiesen(p.id));
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -213,7 +224,7 @@ export function GruppenPlaner({
     <>
       <PageHeader
         title={termin.titel}
-        sub={`${starter.length} Starter · ${planung.gruppen.length} ${planung.gruppen.length === 1 ? "Gruppe" : "Gruppen"}`}
+        sub={`${starter.length} Starter${istNurGruppen ? ` · ${betreuerStarter.length} Betreuer` : ""} · ${planung.gruppen.length} ${planung.gruppen.length === 1 ? "Gruppe" : "Gruppen"}`}
       >
         <ModeTag modus={modus} />
         <AnzeigeMenu info={info} setInfo={setInfo} termine={andereTermine} />
@@ -245,6 +256,7 @@ export function GruppenPlaner({
           {/* Starterliste */}
           <StarterPool
             starter={pool}
+            betreuer={betreuerPool}
             doppelstart={doppelstart}
             gruppenCountByPerson={gruppenCountByPerson}
             istZugewiesen={istZugewiesen}
@@ -312,6 +324,7 @@ export function GruppenPlaner({
 
 function StarterPool({
   starter,
+  betreuer,
   doppelstart,
   gruppenCountByPerson,
   istZugewiesen,
@@ -320,6 +333,7 @@ function StarterPool({
   verfByPT,
 }: {
   starter: Person[];
+  betreuer: Person[];
   doppelstart: boolean;
   gruppenCountByPerson: Map<number, number>;
   istZugewiesen: (id: number) => boolean;
@@ -367,6 +381,24 @@ function StarterPool({
               zugewiesen={istZugewiesen(p.id)}
             />
           ))}
+        </div>
+      )}
+
+      {betreuer.length > 0 && (
+        <div style={{ flex: "none", borderTop: "1px solid var(--color-divider)", maxHeight: "40%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ padding: "10px 14px 7px", fontSize: 12, fontWeight: 600, color: "var(--color-neutral-300)" }}>
+            <i className="ph ph-user" style={{ marginRight: 5, color: "var(--color-neutral-500)" }} />Betreuer
+          </div>
+          <div style={{ overflowY: "auto", padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+            {betreuer.map((p) => (
+              <StarterChip
+                key={p.id}
+                person={p}
+                doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
+                zugewiesen={istZugewiesen(p.id)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -618,13 +650,16 @@ function GruppeCard({
   onSetLaeufer: (id: number, l: number | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `gruppe-${gruppe.id}` });
-  const { summe, schnitt, anzahl } = gruppenAlter(mitglieder, personById);
+  // Betreuer werden getrennt geführt (nur „nur_gruppen"); Alters-/Positionslogik nur für Jugendliche.
+  const mitgliederBetreuer = mitglieder.filter((m) => personById.get(m.personId)?.rolle === "betreuer");
+  const jugendMitglieder = mitglieder.filter((m) => personById.get(m.personId)?.rolle !== "betreuer");
+  const { summe, schnitt, anzahl } = gruppenAlter(jugendMitglieder, personById);
   const soll = sollZeitLabel(summe);
-  const warnungen = gruppenWarnungen(mitglieder, personById, verfByPerson as Map<number, "ja" | "nein" | "offen">, modus, new Set());
+  const warnungen = gruppenWarnungen(jugendMitglieder, personById, verfByPerson as Map<number, "ja" | "nein" | "offen">, modus, new Set());
 
   const byPos = new Map<string, Gruppenmitglied>();
-  mitglieder.forEach((m) => m.aTeilPosition && byPos.set(m.aTeilPosition, m));
-  const ohnePos = mitglieder.filter((m) => !m.aTeilPosition);
+  jugendMitglieder.forEach((m) => m.aTeilPosition && byPos.set(m.aTeilPosition, m));
+  const ohnePos = jugendMitglieder.filter((m) => !m.aTeilPosition);
 
   // Doppelt vergebene Knoten (unter den 4 Knoten-Positionen) für Warnung ermitteln
   const knotenCount = new Map<string, number>();
@@ -705,10 +740,10 @@ function GruppeCard({
           )}
         </>
       ) : (
-        // nur_gruppen: Mitglieder als vertikale Liste (eine Person pro Zeile)
+        // nur_gruppen: Jugendliche als Liste, Betreuer als separate Liste darunter
         <div style={{ padding: "10px 15px 13px", borderTop: "1px solid var(--color-divider)", display: "flex", flexDirection: "column", gap: 6, minHeight: 52 }}>
           {mitglieder.length === 0 && <span style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>Personen aus der Starterliste hierher ziehen</span>}
-          {mitglieder.map((m, i) => {
+          {jugendMitglieder.map((m, i) => {
             const p = personById.get(m.personId);
             return p ? (
               <MemberRow
@@ -722,6 +757,27 @@ function GruppeCard({
               />
             ) : null;
           })}
+          {mitgliederBetreuer.length > 0 && (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--color-neutral-500)", textTransform: "uppercase", letterSpacing: ".06em", marginTop: 6, paddingTop: 8, borderTop: "1px dashed var(--color-divider)" }}>
+                Betreuer
+              </div>
+              {mitgliederBetreuer.map((m) => {
+                const p = personById.get(m.personId);
+                return p ? (
+                  <MemberRow
+                    key={m.id}
+                    m={m}
+                    p={p}
+                    from={gruppe.id}
+                    doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2}
+                    onRemove={() => onRemoveMember(m.id)}
+                    betreuer
+                  />
+                ) : null;
+              })}
+            </>
+          )}
         </div>
       )}
 
@@ -778,7 +834,7 @@ function PositionRow({ gruppeId, pos, istBTeil, belegt, children }: { gruppeId: 
   );
 }
 
-function MemberRow({ index, m, p, from, doppel, onRemove }: { index: number; m: Gruppenmitglied; p: Person; from: number; doppel: boolean; onRemove: () => void }) {
+function MemberRow({ index, m, p, from, doppel, onRemove, betreuer }: { index?: number; m: Gruppenmitglied; p: Person; from: number; doppel: boolean; onRemove: () => void; betreuer?: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `member-${m.id}`,
     data: { personId: p.id, from },
@@ -791,8 +847,8 @@ function MemberRow({ index, m, p, from, doppel, onRemove }: { index: number; m: 
         opacity: isDragging ? 0.4 : p.aktiv ? 1 : 0.5,
       }}
     >
-      <span style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, flex: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
-        {index}
+      <span style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, flex: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, background: betreuer ? "var(--color-neutral-800)" : "var(--color-accent-900)", color: betreuer ? "var(--color-neutral-300)" : "var(--color-accent-200)" }}>
+        {betreuer ? <i className="ph ph-user" style={{ fontSize: 12 }} /> : index}
       </span>
       <span
         ref={setNodeRef}
