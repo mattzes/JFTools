@@ -390,7 +390,9 @@ function StatischTabelle({
     kat.kind === "wassergraben"
       ? WASSERGRABEN_WERTE.map((w) => ({ value: w, label: WASSERGRABEN_LABELS[w] }))
       : LEINBEUTEL_WERTE.map((w) => ({ value: w, label: LEINBEUTEL_LABELS[w] }));
-  const wertRang = new Map(options.map((o, i) => [o.value, i])); // semantische Reihenfolge
+  // Custom-Reihenfolge: „nicht eingetragen" = niedrigster Wert (0), dann in Options-Reihenfolge
+  // (Wassergraben: ohne Geräte → mit Verteiler → mit Schlauchpaket).
+  const wertRang = new Map(options.map((o, i) => [o.value, i + 1]));
   const base = [...teilnehmer].sort((a, b) => {
     const pa = personById.get(a.personId), pb = personById.get(b.personId);
     return (pa ? `${pa.nachname} ${pa.vorname}` : "").localeCompare(pb ? `${pb.nachname} ${pb.vorname}` : "");
@@ -399,7 +401,7 @@ function StatischTabelle({
     const p = personById.get(e.personId);
     switch (key) {
       case "person": return p ? `${p.nachname} ${p.vorname}` : "";
-      case "wert": return e.wert != null ? wertRang.get(e.wert) ?? null : null;
+      case "wert": return e.wert != null ? wertRang.get(e.wert) ?? 0 : 0;
       default: return null;
     }
   });
