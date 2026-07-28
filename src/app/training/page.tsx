@@ -300,16 +300,21 @@ function KnotenTabelle({
   onOpen: (personId: number) => void;
 }) {
   const knoten = kat.disziplinen ?? [];
-  const rows = [...teilnehmer].sort((a, b) => {
+  const { sort, toggle } = useSort();
+  const base = [...teilnehmer].sort((a, b) => {
     const pa = personById.get(a.personId), pb = personById.get(b.personId);
     return (pa ? `${pa.nachname} ${pa.vorname}` : "").localeCompare(pb ? `${pb.nachname} ${pb.vorname}` : "");
+  });
+  const rows = sortRows(base, sort, (e, key) => {
+    const p = personById.get(e.personId);
+    return key === "person" ? (p ? `${p.nachname} ${p.vorname}` : "") : null;
   });
   return (
     <div className="hidden lg:block" style={{ padding: "0 18px" }}>
       <table className="table">
         <thead>
           <tr>
-            <th>Person</th>
+            <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
             <th>Knoten</th>
             <th style={{ textAlign: "center" }}>Bestzeit</th>
             <th style={{ textAlign: "center" }}>Ø Zeit</th>
@@ -380,21 +385,31 @@ function StatischTabelle({
   onSetWert: (personId: number, wert: string | null) => void;
   onRemove: (e: TrainingEintrag) => void;
 }) {
+  const { sort, toggle } = useSort();
   const options: { value: string; label: string }[] =
     kat.kind === "wassergraben"
       ? WASSERGRABEN_WERTE.map((w) => ({ value: w, label: WASSERGRABEN_LABELS[w] }))
       : LEINBEUTEL_WERTE.map((w) => ({ value: w, label: LEINBEUTEL_LABELS[w] }));
-  const rows = [...teilnehmer].sort((a, b) => {
+  const wertRang = new Map(options.map((o, i) => [o.value, i])); // semantische Reihenfolge
+  const base = [...teilnehmer].sort((a, b) => {
     const pa = personById.get(a.personId), pb = personById.get(b.personId);
     return (pa ? `${pa.nachname} ${pa.vorname}` : "").localeCompare(pb ? `${pb.nachname} ${pb.vorname}` : "");
+  });
+  const rows = sortRows(base, sort, (e, key) => {
+    const p = personById.get(e.personId);
+    switch (key) {
+      case "person": return p ? `${p.nachname} ${p.vorname}` : "";
+      case "wert": return e.wert != null ? wertRang.get(e.wert) ?? null : null;
+      default: return null;
+    }
   });
   return (
     <div style={{ padding: "0 18px" }}>
       <table className="table">
         <thead>
           <tr>
-            <th>Person</th>
-            <th>{kat.kind === "wassergraben" ? "Erreicht" : "Ergebnis"}</th>
+            <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
+            <Th sortKey="wert" sort={sort} onSort={toggle}>{kat.kind === "wassergraben" ? "Erreicht" : "Ergebnis"}</Th>
             <th style={{ width: 44 }} />
           </tr>
         </thead>
