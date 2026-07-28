@@ -57,6 +57,7 @@ export default function KleiderkammerPage() {
   const [suche, setSuche] = useState("");
   const [ausgabeForm, setAusgabeForm] = useState<AusgabeForm | null>(null);
   const [tauschForm, setTauschForm] = useState<{ ausgabe: KleidungAusgabe; groesse: string | null } | null>(null);
+  const [rueckgabeForm, setRueckgabeForm] = useState<{ ausgabe: KleidungAusgabe; menge: string } | null>(null);
 
   // ── Ableitungen ──
   const issuedByKey = useMemo(() => {
@@ -199,19 +200,22 @@ export default function KleiderkammerPage() {
     reloadAusgaben();
   }
 
-  async function nimmZurueck(a: KleidungAusgabe) {
-    const s = stueckById.get(a.kleidungsstueckId);
-    if (
-      await confirm({
-        title: "Rückgabe",
-        message: `„${s?.name ?? "Utensil"}"${a.groesse ? ` (${a.groesse})` : ""} × ${a.menge} zurücknehmen?`,
-        confirmLabel: "Zurücknehmen",
-        danger: false,
-      })
-    ) {
-      await api(`/kleidung-ausgaben/${a.id}`, { method: "DELETE" });
-      reloadAusgaben();
+  async function speichereRueckgabe() {
+    if (!rueckgabeForm) return;
+    const { ausgabe } = rueckgabeForm;
+    const menge = Math.min(Math.max(Number(rueckgabeForm.menge) || 0, 1), ausgabe.menge);
+    if (menge >= ausgabe.menge) {
+      // vollständige Rückgabe → Zeile entfernen
+      await api(`/kleidung-ausgaben/${ausgabe.id}`, { method: "DELETE" });
+    } else {
+      // Teilrückgabe → Restmenge behalten
+      await api(`/kleidung-ausgaben/${ausgabe.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ menge: ausgabe.menge - menge }),
+      });
     }
+    setRueckgabeForm(null);
+    reloadAusgaben();
   }
 
   async function speichereTausch() {
@@ -291,7 +295,7 @@ export default function KleiderkammerPage() {
           verfuegbar={verfuegbar}
           ausgabenAlle={ausgaben}
           onAusgeben={() => setAusgabeForm({ kleidungsstueckId: null, groesse: null, menge: "1", ausgegebenAm: heute(), notiz: "" })}
-          onRueckgabe={nimmZurueck}
+          onRueckgabe={(a) => setRueckgabeForm({ ausgabe: a, menge: String(a.menge) })}
           onTauschen={(a) => setTauschForm({ ausgabe: a, groesse: null })}
         />
       )}
@@ -563,6 +567,41 @@ export default function KleiderkammerPage() {
           <div className="dialog-actions">
             <button className="btn btn-secondary" onClick={() => setTauschForm(null)}>Abbrechen</button>
             <button className="btn btn-primary" onClick={speichereTausch} disabled={!tauschForm.groesse}>Tauschen</button>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Dialog: Rückgabe (mit Menge) */}
+      {rueckgabeForm && (
+        <Dialog
+          title={`Rückgabe — ${stueckById.get(rueckgabeForm.ausgabe.kleidungsstueckId)?.name ?? "Utensil"}`}
+          onClose={() => setRueckgabeForm(null)}
+        >
+          <div style={{ fontSize: 13, color: "var(--color-neutral-500)", marginBottom: 4 }}>
+            Ausgegeben: {rueckgabeForm.ausgabe.groesse ? `Größe ${rueckgabeForm.ausgabe.groesse} · ` : ""}
+            {rueckgabeForm.ausgabe.menge} Stück
+          </div>
+          <div className="field">
+            <label>Zurückzunehmende Menge (max. {rueckgabeForm.ausgabe.menge})</label>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={rueckgabeForm.ausgabe.menge}
+              autoFocus
+              value={rueckgabeForm.menge}
+              onChange={(e) => setRueckgabeForm({ ...rueckgabeForm, menge: e.target.value })}
+            />
+          </div>
+          <div className="dialog-actions">
+            <button className="btn btn-secondary" onClick={() => setRueckgabeForm(null)}>Abbrechen</button>
+            <button
+              className="btn btn-primary"
+              onClick={speichereRueckgabe}
+              disabled={(Number(rueckgabeForm.menge) || 0) < 1 || (Number(rueckgabeForm.menge) || 0) > rueckgabeForm.ausgabe.menge}
+            >
+              Zurücknehmen
+            </button>
           </div>
         </Dialog>
       )}
