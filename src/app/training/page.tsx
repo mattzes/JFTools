@@ -302,7 +302,7 @@ function KnotenTabelle({
   );
   return (
     <div className="hidden lg:block" style={{ padding: "0 18px" }}>
-      <table className="table">
+      <table className="table knoten">
         <thead>
           <tr>
             <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
@@ -314,12 +314,12 @@ function KnotenTabelle({
           </tr>
         </thead>
         <tbody>
-          {rows.map((p) => {
+          {rows.map((p, pi) => {
             const notiz = eintragByPerson.get(p.id)?.notiz;
             return knoten.map((kn, i) => {
               const agg = aggFor(messungen, p.id, disziplinIdByName.get(kn));
               return (
-                <tr key={`${p.id}:${kn}`} onClick={() => onOpen(p.id)} style={{ cursor: "pointer" }}>
+                <tr key={`${p.id}:${kn}`} className={i === 0 && pi > 0 ? "grp-start" : undefined} onClick={() => onOpen(p.id)} style={{ cursor: "pointer" }}>
                   {i === 0 && (
                     <td rowSpan={knoten.length} style={{ fontSize: 14, fontWeight: 500, verticalAlign: "top", borderRight: "1px solid var(--color-divider)" }}>
                       {personName(p)}

@@ -203,6 +203,15 @@ select.input { appearance: auto; }
       color-mix(in srgb, var(--color-text) 8%, transparent) calc(100% - 48px), transparent) no-repeat bottom / 100% 1px;
 }
 
+/* Knoten-Training: 4 Knoten je Person bilden einen Block.
+   Keine Trennlinie zwischen den 4 Knoten, sondern nur oberhalb jeder Person-Gruppe. */
+.table.knoten tbody tr { background-image: none; }
+.table.knoten tbody tr:hover {
+  background: linear-gradient(color-mix(in srgb, var(--color-text) 4%, transparent),
+                              color-mix(in srgb, var(--color-text) 4%, transparent)) no-repeat 0 0 / 100% 100%;
+}
+.table.knoten tbody tr.grp-start td { box-shadow: inset 0 1px 0 var(--color-divider); }
+
 /* ── dialog ── */
 .dialog-backdrop {
   position: fixed; inset: 0; display: grid; place-items: center;
