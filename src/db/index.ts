@@ -156,19 +156,6 @@ CREATE TABLE IF NOT EXISTS kleidung_ausgaben (
 );
 `;
 
-// Termine 2026 aus der Spec als Seed
-const TERMINE_SEED: Array<[string, string, string | null, string, string]> = [
-  ["Brennballturnier (Tag 1)", "2026-03-14", null, "keine", "alle"],
-  ["Brennballturnier (Tag 2)", "2026-03-15", null, "keine", "alle"],
-  ["O-Marsch Handorf", "2026-05-01", null, "nur_gruppen", "alle"],
-  ["Pokalwettbewerb Laßrönne", "2026-05-10", null, "a_und_b_teil", "alle"],
-  ["KJF-Tag", "2026-05-31", null, "a_und_b_teil", "alle"],
-  ["SJF-Tag", "2026-06-13", null, "a_und_b_teil", "alle"],
-  ["Bezirksentscheid", "2026-06-13", "2026-06-14", "a_und_b_teil", "alle"],
-  ["Landesentscheid", "2026-06-26", "2026-06-28", "a_und_b_teil", "alle"],
-  ["Kreiszeltlager", "2026-07-17", "2026-07-26", "nur_gruppen", "alle"],
-];
-
 // Leichte, idempotente Spalten-Migrationen für bereits bestehende Datenbanken
 // (CREATE TABLE IF NOT EXISTS legt neue Spalten sonst nicht nach).
 function migrate(sqlite: Database.Database) {
@@ -230,13 +217,6 @@ function init() {
   migrate(sqlite);
 
   // Seed nur bei leerem Datenbestand
-  const terminCount = sqlite.prepare("SELECT COUNT(*) AS n FROM termine").get() as { n: number };
-  if (terminCount.n === 0) {
-    const ins = sqlite.prepare(
-      "INSERT INTO termine (titel, datum_von, datum_bis, planungsmodus, zielgruppe) VALUES (?,?,?,?,?)",
-    );
-    for (const t of TERMINE_SEED) ins.run(...t);
-  }
   const dokCount = sqlite.prepare("SELECT COUNT(*) AS n FROM dokumententypen").get() as { n: number };
   if (dokCount.n === 0) {
     const ins = sqlite.prepare("INSERT INTO dokumententypen (name) VALUES (?)");
