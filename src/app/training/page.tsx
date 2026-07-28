@@ -574,47 +574,51 @@ function ZeitDialog({
 
   return (
     <Dialog title={`${personName(person)} — ${kat.label}`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }}>
-      <div className="field">
-        <label>Notiz (pro Person)</label>
-        <textarea className="input" placeholder="z. B. verhaspelt sich mit dem Knoten" value={notiz} onChange={(e) => setNotiz(e.target.value)} onBlur={saveNotiz} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
+      <div style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)", display: "flex", flexDirection: "column", gap: 12, paddingBottom: 4 }}>
         <div className="field">
-          <label>Datum</label>
-          <DatePicker value={datum} onChange={setDatum} clearable={false} />
+          <label>Notiz (pro Person)</label>
+          <textarea className="input" placeholder="z. B. verhaspelt sich mit dem Knoten" value={notiz} onChange={(e) => setNotiz(e.target.value)} onBlur={saveNotiz} />
         </div>
-        <div className="field">
-          <label>Zeit (Sekunden)</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input type="text" inputMode="decimal" className="input" placeholder="z. B. 14.2" value={wert} onChange={(e) => setWert(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addZeit()} />
-            <button className="btn btn-primary" onClick={addZeit} disabled={!wert || busy}><i className="ph ph-plus" /></button>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="field">
+            <label>Datum</label>
+            <DatePicker value={datum} onChange={setDatum} clearable={false} />
+          </div>
+          <div className="field">
+            <label>Zeit (Sekunden)</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input type="text" inputMode="decimal" className="input" placeholder="z. B. 14.2" value={wert} onChange={(e) => setWert(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addZeit()} />
+              <button className="btn btn-primary" onClick={addZeit} disabled={!wert || busy}><i className="ph ph-plus" /></button>
+            </div>
           </div>
         </div>
       </div>
 
       {eintraege.length > 0 && (
-        <table className="table" style={{ marginTop: 4 }}>
-          <thead>
-            <tr><th>Datum</th><th style={{ textAlign: "center" }}>Zeit</th><th style={{ width: 40 }} /></tr>
-          </thead>
-          <tbody>
-            {eintraege.map((m) => (
-              <tr key={m.id}>
-                <td style={{ whiteSpace: "nowrap" }}>{fmtDatum(m.datum)}</td>
-                <td style={{ textAlign: "center" }}><b style={{ color: m.wertSekunden === best ? "var(--color-accent-200)" : "inherit" }}>{m.wertSekunden}s</b></td>
-                <td style={{ textAlign: "center" }}>
-                  <button title="Zeit löschen" onClick={() => del(m.id)} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-500)", padding: 4 }}>
-                    <i className="ph ph-trash" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
+          <table className="table" style={{ marginTop: 4 }}>
+            <thead>
+              <tr><th>Datum</th><th style={{ textAlign: "center" }}>Zeit</th><th style={{ width: 40 }} /></tr>
+            </thead>
+            <tbody>
+              {eintraege.map((m) => (
+                <tr key={m.id}>
+                  <td style={{ whiteSpace: "nowrap" }}>{fmtDatum(m.datum)}</td>
+                  <td style={{ textAlign: "center" }}><b style={{ color: m.wertSekunden === best ? "var(--color-accent-200)" : "inherit" }}>{m.wertSekunden}s</b></td>
+                  <td style={{ textAlign: "center" }}>
+                    <button title="Zeit löschen" onClick={() => del(m.id)} style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-500)", padding: 4 }}>
+                      <i className="ph ph-trash" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <div className="dialog-actions">
+      <div className="dialog-actions" style={{ position: "sticky", bottom: 0, zIndex: 1, background: "var(--color-surface)", paddingTop: 8 }}>
         <button className="btn btn-danger" onClick={onRemove} style={{ marginRight: "auto" }}><i className="ph ph-user-minus" />Teilnehmer entfernen</button>
         <button className="btn btn-secondary" onClick={async () => { await saveNotiz(); onChanged(); onClose(); }}>Schließen</button>
       </div>
@@ -681,15 +685,18 @@ function KnotenDialog({
 
   return (
     <Dialog title={`${personName(person)} — Knoten`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }}>
-      <div className="field">
-        <label>Notiz (pro Person)</label>
-        <textarea className="input" value={notiz} onChange={(e) => setNotiz(e.target.value)} />
-      </div>
-      <div className="field">
-        <label>Datum</label>
-        <DatePicker value={datum} onChange={setDatum} clearable={false} />
+      <div style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)", display: "flex", flexDirection: "column", gap: 12, paddingBottom: 4 }}>
+        <div className="field">
+          <label>Notiz (pro Person)</label>
+          <textarea className="input" value={notiz} onChange={(e) => setNotiz(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Datum</label>
+          <DatePicker value={datum} onChange={setDatum} clearable={false} />
+        </div>
       </div>
 
+      <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
       {knoten.map((kn) => {
         const disziplinId = disziplinIdByName.get(kn);
         const eintraege = messungen
@@ -727,8 +734,9 @@ function KnotenDialog({
           </div>
         );
       })}
+      </div>
 
-      <div className="dialog-actions">
+      <div className="dialog-actions" style={{ position: "sticky", bottom: 0, zIndex: 1, background: "var(--color-surface)", paddingTop: 8 }}>
         <button className="btn btn-danger" onClick={onRemove} style={{ marginRight: "auto" }}><i className="ph ph-user-minus" />Teilnehmer entfernen</button>
         <button className="btn btn-secondary" onClick={async () => { await saveNotiz(); onChanged(); onClose(); }}>Schließen</button>
         <button className="btn btn-primary" onClick={speichern} disabled={busy || (!hatEingabe && notiz === (eintrag.notiz ?? ""))}>
