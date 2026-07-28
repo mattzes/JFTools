@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { BackupDialog } from "./BackupDialog";
+import { ExportDialog } from "./ExportDialog";
 
 const NAV_ITEMS = [
   { href: "/", icon: "ph-house", label: "Übersicht", key: "dashboard" },
@@ -33,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   return (
     <div className="flex h-dvh overflow-hidden">
@@ -112,6 +114,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--color-divider)" }}>
           <button
             type="button"
+            onClick={() => setExportOpen(true)}
+            title={collapsed ? "Excel-Export" : undefined}
+            style={{
+              display: "flex", alignItems: "center", gap: 11, padding: "9px 11px", width: "100%",
+              justifyContent: collapsed ? "center" : "flex-start", border: 0, background: "transparent",
+              borderRadius: 8, fontSize: 13, color: "var(--color-neutral-300)", cursor: "pointer", textAlign: "left",
+            }}
+          >
+            <i className="ph ph-file-xls" style={{ fontSize: 18 }} />
+            {!collapsed && <span>Excel-Export</span>}
+          </button>
+          <button
+            type="button"
             onClick={() => setBackupOpen(true)}
             title={collapsed ? "Backup" : undefined}
             style={{
@@ -160,6 +175,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         })}
       </div>
 
+      {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
       {backupOpen && <BackupDialog onClose={() => setBackupOpen(false)} />}
     </div>
   );
