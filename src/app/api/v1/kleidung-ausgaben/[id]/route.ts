@@ -11,9 +11,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const id = Number((await ctx.params).id);
   const body = await parseBody(req, kleidungAusgabeUpdateSchema);
   if (body instanceof NextResponse) return body;
+  const set: { menge?: number; groesse?: string | null } = {};
+  if (body.menge !== undefined) set.menge = body.menge;
+  if (body.groesse !== undefined) set.groesse = body.groesse?.trim() || null;
   const row = db
     .update(schema.kleidungAusgaben)
-    .set(touch({ menge: body.menge }))
+    .set(touch(set))
     .where(eq(schema.kleidungAusgaben.id, id))
     .returning()
     .get();

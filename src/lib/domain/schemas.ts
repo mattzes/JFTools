@@ -184,7 +184,8 @@ export const kleidungAusgabeSchema = z.object({
 });
 
 export const kleidungAusgabeUpdateSchema = z.object({
-  menge: z.number().int().min(1),
+  menge: z.number().int().min(1).optional(),
+  groesse: z.string().nullish(), // Größentausch: bestehende Ausgabe auf andere Größe setzen
 });
 
 export type PersonInput = z.infer<typeof personSchema>;

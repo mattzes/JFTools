@@ -56,6 +56,7 @@ export default function KleiderkammerPage() {
   const [selPersonId, setSelPersonId] = useState<number | null>(null);
   const [suche, setSuche] = useState("");
   const [ausgabeForm, setAusgabeForm] = useState<AusgabeForm | null>(null);
+  const [tauschForm, setTauschForm] = useState<{ ausgabe: KleidungAusgabe; groesse: string | null } | null>(null);
 
   // ── Ableitungen ──
   const issuedByKey = useMemo(() => {
@@ -213,6 +214,24 @@ export default function KleiderkammerPage() {
     }
   }
 
+  async function speichereTausch() {
+    if (!tauschForm || !tauschForm.groesse) return;
+    await api(`/kleidung-ausgaben/${tauschForm.ausgabe.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ groesse: tauschForm.groesse }),
+    });
+    setTauschForm(null);
+    reloadAusgaben();
+  }
+
+  // Für den Tausch-Dialog: andere Größen desselben Stücks mit genügend Bestand
+  const tauschStueck = tauschForm ? stueckById.get(tauschForm.ausgabe.kleidungsstueckId) : null;
+  const tauschOptionen = tauschForm
+    ? (bestandByStueck.get(tauschForm.ausgabe.kleidungsstueckId) ?? []).filter(
+        (b) => b.groesse !== tauschForm.ausgabe.groesse,
+      )
+    : [];
+
   // Für den Ausgabe-Dialog: verfügbare Bestand-Zeilen des gewählten Stücks
   const ausgabeStueck = ausgabeForm?.kleidungsstueckId != null ? stueckById.get(ausgabeForm.kleidungsstueckId) : null;
   const ausgabeBestand = ausgabeForm?.kleidungsstueckId != null ? bestandByStueck.get(ausgabeForm.kleidungsstueckId) ?? [] : [];
@@ -268,9 +287,12 @@ export default function KleiderkammerPage() {
           setSelPersonId={setSelPersonId}
           personAusgaben={personAusgaben}
           stueckById={stueckById}
+          bestandByStueck={bestandByStueck}
+          verfuegbar={verfuegbar}
           ausgabenAlle={ausgaben}
           onAusgeben={() => setAusgabeForm({ kleidungsstueckId: null, groesse: null, menge: "1", ausgegebenAm: heute(), notiz: "" })}
           onRueckgabe={nimmZurueck}
+          onTauschen={(a) => setTauschForm({ ausgabe: a, groesse: null })}
         />
       )}
 
@@ -512,6 +534,38 @@ export default function KleiderkammerPage() {
           </div>
         </Dialog>
       )}
+
+      {/* Dialog: Größe tauschen */}
+      {tauschForm && tauschStueck && (
+        <Dialog title={`Größe tauschen — ${tauschStueck.name}`} onClose={() => setTauschForm(null)}>
+          <div style={{ fontSize: 13, color: "var(--color-neutral-500)", marginBottom: 4 }}>
+            Aktuell: Größe {tauschForm.ausgabe.groesse ?? "—"} × {tauschForm.ausgabe.menge}
+          </div>
+          <div className="field">
+            <label>Neue Größe</label>
+            <select
+              className="input"
+              value={tauschForm.groesse ?? ""}
+              onChange={(e) => setTauschForm({ ...tauschForm, groesse: e.target.value || null })}
+            >
+              <option value="">— wählen —</option>
+              {tauschOptionen.map((b) => {
+                const v = verfuegbar(b);
+                const reicht = v >= tauschForm.ausgabe.menge;
+                return (
+                  <option key={b.id} value={b.groesse ?? ""} disabled={!reicht}>
+                    {b.groesse} — {v} verfügbar
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div className="dialog-actions">
+            <button className="btn btn-secondary" onClick={() => setTauschForm(null)}>Abbrechen</button>
+            <button className="btn btn-primary" onClick={speichereTausch} disabled={!tauschForm.groesse}>Tauschen</button>
+          </div>
+        </Dialog>
+      )}
     </>
   );
 }
@@ -635,9 +689,12 @@ function AusgabeAnsicht({
   setSelPersonId,
   personAusgaben,
   stueckById,
+  bestandByStueck,
+  verfuegbar,
   ausgabenAlle,
   onAusgeben,
   onRueckgabe,
+  onTauschen,
 }: {
   jugendliche: Person[];
   suche: string;
@@ -646,11 +703,23 @@ function AusgabeAnsicht({
   setSelPersonId: (id: number | null) => void;
   personAusgaben: KleidungAusgabe[];
   stueckById: Map<number, Kleidungsstueck>;
+  bestandByStueck: Map<number, KleidungBestand[]>;
+  verfuegbar: (b: KleidungBestand) => number;
   ausgabenAlle: KleidungAusgabe[];
   onAusgeben: () => void;
   onRueckgabe: (a: KleidungAusgabe) => void;
+  onTauschen: (a: KleidungAusgabe) => void;
 }) {
   const anzahlProPerson = (id: number) => ausgabenAlle.filter((a) => a.personId === id).reduce((n, a) => n + a.menge, 0);
+
+  // Tausch möglich, wenn eine andere Größe desselben Stücks genug verfügbaren Bestand hat
+  const kannTauschen = (a: KleidungAusgabe) => {
+    const s = stueckById.get(a.kleidungsstueckId);
+    if (!s?.mitGroessen) return false;
+    return (bestandByStueck.get(a.kleidungsstueckId) ?? []).some(
+      (b) => b.groesse !== a.groesse && verfuegbar(b) >= a.menge,
+    );
+  };
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
@@ -735,7 +804,21 @@ function AusgabeAnsicht({
                       <td style={{ textAlign: "center" }}>{a.menge}</td>
                       <td>{fmtDate(a.ausgegebenAm)}</td>
                       <td style={{ color: "var(--color-neutral-500)", fontSize: 13 }}>{a.notiz ?? ""}</td>
-                      <td style={{ textAlign: "right" }}>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        {(() => {
+                          const swap = kannTauschen(a);
+                          return (
+                            <button
+                              className="btn btn-ghost"
+                              title={swap ? "In andere Größe tauschen" : "Keine andere Größe verfügbar"}
+                              onClick={() => onTauschen(a)}
+                              disabled={!swap}
+                              style={swap ? undefined : { opacity: 0.4, cursor: "not-allowed" }}
+                            >
+                              <i className="ph ph-arrows-left-right" /> Tauschen
+                            </button>
+                          );
+                        })()}
                         <button className="btn btn-ghost" title="Zurücknehmen" onClick={() => onRueckgabe(a)}>
                           <i className="ph ph-arrow-u-up-left" /> Rückgabe
                         </button>
