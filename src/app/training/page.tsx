@@ -11,6 +11,7 @@ import {
   LEINBEUTEL_WERTE,
   LEINBEUTEL_LABELS,
 } from "@/lib/domain/constants";
+import { useStoredState } from "@/lib/useStoredState";
 
 const heute = () => new Date().toISOString().slice(0, 10);
 
@@ -32,7 +33,7 @@ export default function TrainingPage() {
   const { data: disziplinen } = useApi<Disziplin[]>("/disziplinen");
   const { data: messungen, reload: reloadMess } = useApi<Messung[]>("/messungen");
   const { data: eintraege, reload: reloadEintr } = useApi<TrainingEintrag[]>("/training-eintraege");
-  const [aktiveKey, setAktiveKey] = useState<string>(TRAINING_KATEGORIEN[0].key);
+  const [aktiveKey, setAktiveKey] = useStoredState("training.kat", TRAINING_KATEGORIEN[0].key);
   const [addOpen, setAddOpen] = useState(false);
   const [detailPerson, setDetailPerson] = useState<number | null>(null);
 
