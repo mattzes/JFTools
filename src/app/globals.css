@@ -132,6 +132,9 @@ a { color: var(--color-accent); text-underline-offset: 3px; }
 textarea.input { min-height: 70px; resize: vertical; }
 select.input { appearance: auto; }
 .input::placeholder { color: var(--color-neutral-600); }
+/* Header-Suche: mobil volle Breite, Desktop kürzer (unlayered, damit es .input schlägt) */
+.input-search { flex: 1; min-width: 180px; }
+@media (min-width: 1024px) { .input-search { flex: none; width: 200px; } }
 
 .seg {
   display: inline-flex; overflow: hidden;

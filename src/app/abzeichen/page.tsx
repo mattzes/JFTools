@@ -43,6 +43,7 @@ const doneStyle: React.CSSProperties = { display: "inline-flex", alignItems: "ce
 export default function AbzeichenPage() {
   const { data: personen, reload } = useApi<Person[]>("/personen");
   const [selId, setSelId] = useState<number | null>(null);
+  const [suche, setSuche] = useState("");
   const { sort, toggle } = useSort();
 
   if (!personen) return <Spinner />;
@@ -60,56 +61,29 @@ export default function AbzeichenPage() {
     return p[b.planKey] ?? abzeichenVorschlag(p, b.id);
   });
   const sel = selId != null ? personen.find((p) => p.id === selId) ?? null : null;
+  const q = suche.trim().toLowerCase();
+  const jugendGefiltert = q ? jugend.filter((p) => personName(p).toLowerCase().includes(q)) : jugend;
 
   async function patchPerson(id: number, body: Record<string, unknown>) {
     await api(`/personen/${id}`, { method: "PATCH", body: JSON.stringify(body) });
     reload();
   }
 
-  // KPIs
-  const doneCount = (b: Badge) => jugend.filter((p) => p[b.dateKey]).length;
-  let plannedThisYear = 0;
-  for (const p of jugend) {
-    for (const b of BADGES) {
-      if (p[b.dateKey]) continue;
-      const eff = p[b.planKey] ?? abzeichenVorschlag(p, b.id);
-      if (eff === jahr) plannedThisYear++;
-    }
-  }
-
   return (
     <>
-      <PageHeader title="Abzeichen" sub="Übersicht & Planung — Zeile anklicken zum Eintragen oder Planen" />
+      <PageHeader title="Abzeichen" sub="Übersicht & Planung — Zeile anklicken zum Eintragen oder Planen">
+        <input
+          className="input input-search"
+          placeholder="Suchen …"
+          value={suche}
+          onChange={(e) => setSuche(e.target.value)}
+        />
+      </PageHeader>
 
       {jugend.length === 0 ? (
         <Empty icon="ph-medal" text="Keine Jugendlichen" hint="Sobald Jugendliche angelegt sind, erscheinen hier ihre Abzeichen." />
       ) : (
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 24px" }} className="lg:px-6">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" style={{ marginBottom: 16 }}>
-            {BADGES.map((b) => (
-              <div className="kpi" key={b.id}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ width: 30, height: 30, borderRadius: 8, display: "grid", placeItems: "center", fontSize: 16, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
-                    <i className="ph ph-medal" />
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 600, color: "var(--color-neutral-500)" }}>{b.label}</span>
-                </div>
-                <div className="kpi-n">{doneCount(b)}<span style={{ fontSize: 14, color: "var(--color-neutral-500)", fontWeight: 400 }}> / {jugend.length}</span></div>
-                <div className="kpi-l">erledigt</div>
-              </div>
-            ))}
-            <div className="kpi">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ width: 30, height: 30, borderRadius: 8, display: "grid", placeItems: "center", fontSize: 16, background: "var(--color-accent-2-800)", color: "var(--color-accent-2-100)" }}>
-                  <i className="ph ph-calendar-check" />
-                </span>
-                <span style={{ fontSize: 10.5, fontWeight: 600, color: "var(--color-neutral-500)" }}>{jahr}</span>
-              </div>
-              <div className="kpi-n">{plannedThisYear}</div>
-              <div className="kpi-l">dieses Jahr geplant</div>
-            </div>
-          </div>
-
           {/* Desktop-Matrix */}
           <div className="hidden lg:block" style={{ overflowX: "auto" }}>
             <table className="table">
@@ -122,7 +96,7 @@ export default function AbzeichenPage() {
                 </tr>
               </thead>
               <tbody>
-                {jugend.map((p) => (
+                {jugendGefiltert.map((p) => (
                   <tr key={p.id} onClick={() => setSelId(p.id)} style={{ cursor: "pointer" }} title="Eintragen / planen">
                     <td><span style={{ fontSize: 15, fontWeight: 500 }}>{personName(p)}</span></td>
                     {BADGES.map((b) => (
@@ -136,31 +110,40 @@ export default function AbzeichenPage() {
             </table>
           </div>
 
+          {/* Mobile: Verteilung nach Jahr (nur aktuelles & nächstes Jahr) — bei aktiver Suche ausgeblendet */}
+          {!q && <JahresVerteilung jugend={jugend} jahr={jahr} />}
+
           {/* Mobile-Karten */}
-          <div className="flex flex-col gap-2 lg:hidden">
-            {jugend.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setSelId(p.id)}
-                className="panel"
-                style={{ padding: "12px 14px", border: 0, textAlign: "left", cursor: "pointer", font: "inherit", color: "inherit", width: "100%" }}
-              >
-                <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 9 }}>{personName(p)}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-                  {BADGES.map((b) => (
-                    <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ width: 42, fontSize: 12, color: "var(--color-neutral-400)" }}>{b.label}</span>
-                      <span style={{ marginLeft: "auto" }}>
-                        <AbzeichenCell p={p} badge={b} />
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </button>
-            ))}
+          <div className="flex flex-col gap-4 lg:hidden">
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-neutral-400)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
+              Jugendliche
+            </div>
+            {jugendGefiltert.length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--color-neutral-500)", padding: "8px 2px" }}>Niemand gefunden.</div>
+            ) : (
+              jugendGefiltert.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelId(p.id)}
+                  className="panel"
+                  style={{ padding: "12px 14px", border: 0, textAlign: "left", cursor: "pointer", font: "inherit", color: "inherit", width: "100%" }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 9 }}>{personName(p)}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                    {BADGES.map((b) => (
+                      <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ width: 42, fontSize: 12, color: "var(--color-neutral-400)" }}>{b.label}</span>
+                        <span style={{ marginLeft: "auto" }}>
+                          <AbzeichenCell p={p} badge={b} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </button>
+              ))
+            )}
           </div>
 
-          <JahresVerteilung jugend={jugend} jahr={jahr} />
         </div>
       )}
 
@@ -263,24 +246,25 @@ function PersonDialog({
 }
 
 function JahresVerteilung({ jugend, jahr }: { jugend: Person[]; jahr: number }) {
-  type Eintrag = { jahr: number; typ: Badge["typ"]; name: string };
+  type Eintrag = { jahr: number; typ: Badge["typ"]; name: string; geplant: boolean };
   const eintraege: Eintrag[] = [];
   for (const p of jugend) {
     for (const b of BADGES) {
       if (p[b.dateKey]) continue; // erledigt
-      const eff = p[b.planKey] ?? abzeichenVorschlag(p, b.id);
-      if (eff != null) eintraege.push({ jahr: eff, typ: b.typ, name: personName(p) });
+      const plan = p[b.planKey];
+      const eff = plan ?? abzeichenVorschlag(p, b.id);
+      if (eff != null) eintraege.push({ jahr: eff, typ: b.typ, name: personName(p), geplant: plan != null });
     }
   }
-  const jahre = [...new Set(eintraege.map((e) => e.jahr))].sort((a, b) => a - b).slice(0, 8);
+  const jahre = [jahr, jahr + 1].filter((y) => eintraege.some((e) => e.jahr === y));
   if (jahre.length === 0) return null;
 
   return (
-    <div style={{ marginTop: 20 }}>
+    <div className="lg:hidden" style={{ marginBottom: 20 }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-neutral-400)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>
         Verteilung nach Jahr
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" style={{ alignContent: "start" }}>
+      <div className="grid grid-cols-1 gap-4" style={{ alignContent: "start" }}>
         {jahre.map((y) => {
           const jeType = BADGES.map((b) => ({ typ: b.typ, items: eintraege.filter((e) => e.jahr === y && e.typ === b.typ) })).filter((g) => g.items.length > 0);
           const total = jeType.reduce((a, g) => a + g.items.length, 0);
@@ -290,18 +274,31 @@ function JahresVerteilung({ jugend, jahr }: { jugend: Person[]; jahr: number }) 
                 <h4 style={{ fontSize: 17 }}>{y}{y === jahr ? " · dieses Jahr" : ""}</h4>
                 <span className="ph-tag" style={{ background: "var(--color-accent-800)", color: "var(--color-accent-100)" }}>{total}</span>
               </div>
-              {jeType.map((g) => (
-                <div key={g.typ} style={{ padding: "11px 17px", borderTop: "1px solid var(--color-divider)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 500, marginBottom: 4 }}>
-                    <i className="ph ph-medal" style={{ color: "var(--color-accent-300)" }} />
-                    {g.typ}
-                    <span style={{ marginLeft: "auto", color: "var(--color-neutral-500)", fontWeight: 400 }}>{g.items.length}</span>
+              {jeType.map((g) => {
+                const geplant = g.items.filter((i) => i.geplant);
+                const vorschlag = g.items.filter((i) => !i.geplant);
+                return (
+                  <div key={g.typ} style={{ padding: "11px 17px", borderTop: "1px solid var(--color-divider)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 500, marginBottom: 4 }}>
+                      <i className="ph ph-medal" style={{ color: "var(--color-accent-300)" }} />
+                      {g.typ}
+                      <span style={{ marginLeft: "auto", color: "var(--color-neutral-500)", fontWeight: 400 }}>{g.items.length}</span>
+                    </div>
+                    {geplant.length > 0 && (
+                      <div style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>
+                        <span style={{ color: "var(--color-accent-2-200)", fontWeight: 600 }}>Geplant: </span>
+                        <span style={{ color: "var(--color-neutral-400)" }}>{geplant.map((i) => i.name).join(", ")}</span>
+                      </div>
+                    )}
+                    {vorschlag.length > 0 && (
+                      <div style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>
+                        <span style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>Vorschlag: </span>
+                        <span style={{ color: "var(--color-neutral-500)", fontStyle: "italic" }}>{vorschlag.map((i) => i.name).join(", ")}</span>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)", lineHeight: 1.5 }}>
-                    {g.items.map((i) => i.name).join(", ")}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           );
         })}
