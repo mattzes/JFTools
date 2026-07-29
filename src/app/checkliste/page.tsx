@@ -39,6 +39,7 @@ export default function RueckmeldungenPage() {
   const { data: doks, reload: reloadDoks } = useApi<Dokumententyp[]>("/dokumententypen");
   const { data: rueck, reload } = useApi<Rueckmeldung[]>("/rueckmeldungen");
   const [neuerTyp, setNeuerTyp] = useState<{ name: string; zielgruppe: Zielgruppe } | null>(null);
+  const [mobilDok, setMobilDok] = useState<Dokumententyp | null>(null);
   const [editMode, setEditMode] = useState(false);
   const { sort, toggle: onSort } = useSort();
 
@@ -62,14 +63,17 @@ export default function RueckmeldungenPage() {
     return null;
   });
 
-  async function toggle(personId: number, dokumententypId: number) {
-    const cur = map.get(`${personId}:${dokumententypId}`);
-    const erhalten = !(cur?.erhalten ?? false);
+  async function setErhalten(personId: number, dokumententypId: number, erhalten: boolean) {
     await api("/rueckmeldungen", {
       method: "PUT",
       body: JSON.stringify({ personId, dokumententypId, erhalten, erhaltenAm: erhalten ? new Date().toISOString().slice(0, 10) : null }),
     });
     reload();
+  }
+
+  function toggle(personId: number, dokumententypId: number) {
+    const cur = map.get(`${personId}:${dokumententypId}`);
+    setErhalten(personId, dokumententypId, !(cur?.erhalten ?? false));
   }
 
   async function addTyp() {
@@ -197,7 +201,13 @@ export default function RueckmeldungenPage() {
           {/* Mobile: pro Dokumenttyp eine Karte */}
           <div className="flex flex-col gap-3 lg:hidden" style={{ padding: "16px 16px 16px" }}>
             {stats.map((d) => (
-              <div key={d.id} className="panel" style={{ padding: "14px 16px" }}>
+              <button
+                key={d.id}
+                className="panel"
+                onClick={() => setMobilDok(d)}
+                title="Checkliste bearbeiten"
+                style={{ padding: "14px 16px", textAlign: "left", color: "inherit", font: "inherit", cursor: "pointer", width: "100%" }}
+              >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                     <span style={{ fontSize: 13.5, fontWeight: 500 }}>{d.name}</span>
@@ -205,7 +215,10 @@ export default function RueckmeldungenPage() {
                       <span className="ph-tag" style={{ background: "var(--color-neutral-800)", color: "var(--color-neutral-300)", fontSize: 9.5 }}>{ZIEL_LABEL[d.zielgruppe]}</span>
                     )}
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{d.da}/{d.ges}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600 }}>
+                    {d.da}/{d.ges}
+                    <i className="ph ph-caret-right" style={{ color: "var(--color-neutral-500)" }} />
+                  </span>
                 </div>
                 <div className="av-bar" style={{ height: 7, marginBottom: 10 }}>
                   <div className="av-fill" style={{ width: `${d.pct}%`, background: d.color }} />
@@ -213,7 +226,7 @@ export default function RueckmeldungenPage() {
                 <div style={{ fontSize: 11, color: "var(--color-neutral-500)" }}>
                   <i className="ph ph-clock" style={{ color: "var(--warn)" }} /> fehlt bei: {d.fehlt.length ? d.fehlt.join(", ") : "niemandem 🎉"}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -236,6 +249,42 @@ export default function RueckmeldungenPage() {
           <div className="dialog-actions">
             <button className="btn btn-secondary" onClick={() => setNeuerTyp(null)}>Abbrechen</button>
             <button className="btn btn-primary" onClick={addTyp} disabled={!neuerTyp.name.trim()}>Anlegen</button>
+          </div>
+        </Dialog>
+      )}
+
+      {mobilDok && (
+        <Dialog title={mobilDok.name} onClose={() => setMobilDok(null)} fullscreenMobile>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label style={{ marginBottom: 0 }}>
+              Wer hat abgegeben?
+              {mobilDok.zielgruppe !== "alle" && <> · {ZIEL_LABEL[mobilDok.zielgruppe]}</>}
+            </label>
+          </div>
+          <div className="dialog-scroll-body" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {aktive
+              .filter((p) => inZielgruppe(p, mobilDok.zielgruppe))
+              .slice()
+              .sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`))
+              .map((p) => {
+                const ok = map.get(`${p.id}:${mobilDok.id}`)?.erhalten ?? false;
+                return (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <RolleBadge rolle={p.rolle} />
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{personName(p)}</span>
+                    <div className="seg" style={{ fontSize: 11, flex: "none" }}>
+                      <button className="seg-opt" data-on={ok} onClick={() => setErhalten(p.id, mobilDok.id, true)}>Erhalten</button>
+                      <button className="seg-opt" data-on={!ok} onClick={() => setErhalten(p.id, mobilDok.id, false)}>Offen</button>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+          <div className="dialog-actions">
+            <button className="btn btn-primary" onClick={() => setMobilDok(null)}>
+              <i className="ph ph-check" />
+              Fertig
+            </button>
           </div>
         </Dialog>
       )}
