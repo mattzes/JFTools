@@ -9,6 +9,7 @@
   .lg\:table { display: table; }
   .lg\:block { display: block; }
   .lg\:grid { display: grid; }
+  .lg\:contents { display: contents; }
   .lg\:hidden { display: none; }
 }
 
@@ -226,6 +227,23 @@ select.input { appearance: auto; }
 }
 .dialog-title { font-family: var(--font-heading); font-weight: 500; font-size: 20px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+@media (max-width: 63.999rem) {
+  .dialog-backdrop.full { padding: 0; }
+  .dialog.full {
+    width: 100%; max-width: 100%; height: 100%; max-height: 100%;
+    border-radius: 0;
+    padding-bottom: 0;
+  }
+  .dialog.full .dialog-actions {
+    position: sticky;
+    bottom: 0;
+    margin: 8px -18px 0;
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-divider);
+  }
+}
 
 /* ── datepicker (eigenes Design, kein natives Control) ── */
 .dp-trigger { display: flex; align-items: center; gap: 8px; text-align: left; }

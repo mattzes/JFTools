@@ -62,12 +62,15 @@ export default function TerminePage() {
   if (!personen || !termine || !verf) return <Spinner />;
 
   const aktive = personen.filter((p) => p.aktiv);
-  function zielPersonen(t: Termin) {
-    return t.zielgruppe === "nur_betreuer"
+  function zielFuer(z: Zielgruppe) {
+    return z === "nur_betreuer"
       ? aktive.filter((p) => p.rolle === "betreuer")
-      : t.zielgruppe === "nur_jugendliche"
+      : z === "nur_jugendliche"
         ? aktive.filter((p) => p.rolle === "jugendlich")
         : aktive;
+  }
+  function zielPersonen(t: Termin) {
+    return zielFuer(t.zielgruppe);
   }
 
   async function setCell(personId: number, terminId: number, status: Verfuegbarkeit["status"]) {
@@ -105,18 +108,20 @@ export default function TerminePage() {
   return (
     <>
       <PageHeader title="Termine & Verfügbarkeit" sub={`Saison ${new Date().getFullYear()} · Ja / Nein / offen`}>
-        {ansicht === "matrix" && (
-          <button
-            className={`hidden lg:inline-flex btn ${editMode ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setEditMode((v) => !v)}
-          >
-            <i className={`ph ${editMode ? "ph-check" : "ph-pencil-simple"}`} />
-            {editMode ? "Bearbeiten fertig" : "Anwesenheiten bearbeiten"}
-          </button>
-        )}
-        <div className="seg hidden lg:inline-flex" style={{ fontSize: 12 }}>
-          <button className="seg-opt" data-on={ansicht === "matrix"} onClick={() => setAnsicht("matrix")}>Matrix</button>
-          <button className="seg-opt" data-on={ansicht === "liste"} onClick={() => setAnsicht("liste")}>Liste</button>
+        <div className="hidden lg:contents">
+          {ansicht === "matrix" && (
+            <button
+              className={`btn ${editMode ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => setEditMode((v) => !v)}
+            >
+              <i className={`ph ${editMode ? "ph-check" : "ph-pencil-simple"}`} />
+              {editMode ? "Bearbeiten fertig" : "Anwesenheiten bearbeiten"}
+            </button>
+          )}
+          <div className="seg" style={{ fontSize: 12 }}>
+            <button className="seg-opt" data-on={ansicht === "matrix"} onClick={() => setAnsicht("matrix")}>Matrix</button>
+            <button className="seg-opt" data-on={ansicht === "liste"} onClick={() => setAnsicht("liste")}>Liste</button>
+          </div>
         </div>
         <button className="btn btn-primary" onClick={() => { setFehler(null); setForm(EMPTY); }}>
           <i className="ph ph-calendar-plus" />
@@ -167,7 +172,7 @@ export default function TerminePage() {
       )}
 
       {form && (
-        <Dialog title={form.id ? "Termin bearbeiten" : "Neuer Termin"} onClose={() => setForm(null)}>
+        <Dialog title={form.id ? "Termin bearbeiten" : "Neuer Termin"} onClose={() => setForm(null)} fullscreenMobile>
           <div className="field">
             <label>Titel *</label>
             <input className="input" value={form.titel} onChange={(e) => setForm({ ...form, titel: e.target.value })} />
@@ -204,6 +209,31 @@ export default function TerminePage() {
               <input className="input" value={form.ort} onChange={(e) => setForm({ ...form, ort: e.target.value })} />
             </div>
           </div>
+          {form.id && (
+            <div className="field lg:hidden">
+              <label>Anwesenheiten</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {zielFuer(form.zielgruppe)
+                  .slice()
+                  .sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`))
+                  .map((p) => {
+                    const cur = cellMap.get(`${p.id}:${form.id}`) ?? "offen";
+                    return (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{personName(p)}</span>
+                        <div className="seg" style={{ fontSize: 11, flex: "none" }}>
+                          {(["ja", "nein", "offen"] as const).map((s) => (
+                            <button key={s} className="seg-opt" data-on={cur === s} onClick={() => setCell(p.id, form.id!, s)}>
+                              {s === "ja" ? "Ja" : s === "nein" ? "Nein" : "offen"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
           {fehler && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{fehler}</div>}
           <div className="dialog-actions">
             {form.id && (

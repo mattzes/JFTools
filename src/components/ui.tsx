@@ -26,14 +26,16 @@ export function Dialog({
   title,
   onClose,
   children,
+  fullscreenMobile = false,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  fullscreenMobile?: boolean;
 }) {
   return (
-    <div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="dialog">
+    <div className={`dialog-backdrop${fullscreenMobile ? " full" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={`dialog${fullscreenMobile ? " full" : ""}`}>
         <div style={{ display: "flex", alignItems: "center" }}>
           <div className="dialog-title">{title}</div>
           <button className="btn btn-ghost" style={{ marginLeft: "auto" }} onClick={onClose} aria-label="Schließen">
