@@ -171,7 +171,8 @@ export default function PersonenPage() {
           ) : (
             <>
               {/* Desktop-Tabelle */}
-              <table className="table hidden lg:table">
+              <div className="hidden lg:block">
+              <table className="table">
                 <thead>
                   <tr>
                     <Th sortKey="name" sort={sort} onSort={toggle}>Name</Th>
@@ -246,6 +247,7 @@ export default function PersonenPage() {
                   })}
                 </tbody>
               </table>
+              </div>
 
               {/* Mobile Karten */}
               <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "4px 6px" }}>
