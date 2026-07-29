@@ -81,7 +81,7 @@ export default function TrainingPage() {
         {/* Mobil: Disziplin als Dropdown */}
         <select
           className="input lg:hidden"
-          style={{ flex: 1, minWidth: 0 }}
+          style={{ flex: 1, minWidth: 160 }}
           value={kat.key}
           onChange={(e) => setAktiveKey(e.target.value)}
         >
@@ -223,37 +223,39 @@ function ZeitTabelle({
     }
   });
   return (
-    <div className="hidden lg:block" style={{ padding: "0 18px" }}>
-      <table className="table">
-        <thead>
-          <tr>
-            <Th sortKey="rang" sort={sort} onSort={toggle} style={{ width: 34 }}>#</Th>
-            <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
-            <Th sortKey="best" sort={sort} onSort={toggle} align="center">Bestzeit</Th>
-            <Th sortKey="schnitt" sort={sort} onSort={toggle} align="center">Ø Zeit</Th>
-            <Th sortKey="letzte" sort={sort} onSort={toggle} align="center">Letzte</Th>
-            <th>Verlauf</th>
-            <Th sortKey="notiz" sort={sort} onSort={toggle}>Notiz</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((r) => (
-            <tr key={r.p.id} onClick={() => onOpen(r.p.id)} style={{ cursor: "pointer" }}>
-              <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{rankByPerson.get(r.p.id) ?? "—"}</td>
-              <td style={{ fontSize: 14 }}>{personName(r.p)}</td>
-              <td style={{ textAlign: "center" }}>{r.agg ? <b style={{ color: "var(--color-accent-200)", fontSize: 15 }}>{r.agg.best}s</b> : "—"}</td>
-              <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.avg.toFixed(1)}s` : "—"}</td>
-              <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.last}s` : "—"}</td>
-              <td>{r.agg ? <Sparkline werte={r.agg.werte} /> : <span style={{ color: "var(--color-neutral-600)" }}>—</span>}</td>
-              <td style={{ fontSize: 13, color: "var(--color-neutral-400)", maxWidth: 220 }}>{r.note || "—"}</td>
+    <>
+      <div className="hidden lg:block" style={{ padding: "0 18px" }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <Th sortKey="rang" sort={sort} onSort={toggle} style={{ width: 34 }}>#</Th>
+              <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
+              <Th sortKey="best" sort={sort} onSort={toggle} align="center">Bestzeit</Th>
+              <Th sortKey="schnitt" sort={sort} onSort={toggle} align="center">Ø Zeit</Th>
+              <Th sortKey="letzte" sort={sort} onSort={toggle} align="center">Letzte</Th>
+              <th>Verlauf</th>
+              <Th sortKey="notiz" sort={sort} onSort={toggle}>Notiz</Th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sorted.map((r) => (
+              <tr key={r.p.id} onClick={() => onOpen(r.p.id)} style={{ cursor: "pointer" }}>
+                <td style={{ color: "var(--color-neutral-500)", fontWeight: 600 }}>{rankByPerson.get(r.p.id) ?? "—"}</td>
+                <td style={{ fontSize: 14 }}>{personName(r.p)}</td>
+                <td style={{ textAlign: "center" }}>{r.agg ? <b style={{ color: "var(--color-accent-200)", fontSize: 15 }}>{r.agg.best}s</b> : "—"}</td>
+                <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.avg.toFixed(1)}s` : "—"}</td>
+                <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.agg ? `${r.agg.last}s` : "—"}</td>
+                <td>{r.agg ? <Sparkline werte={r.agg.werte} /> : <span style={{ color: "var(--color-neutral-600)" }}>—</span>}</td>
+                <td style={{ fontSize: 13, color: "var(--color-neutral-400)", maxWidth: 220 }}>{r.note || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* Mobile */}
       <MobileCards rows={ranked.map((r) => ({ personId: r.p.id, p: r.p, agg: r.agg, note: r.note, rank: rankByPerson.get(r.p.id) }))} onOpen={onOpen} />
-    </div>
+    </>
   );
 }
 
@@ -265,7 +267,7 @@ function MobileCards({
   onOpen: (personId: number) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "4px 0 16px" }}>
+    <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "14px 14px 16px" }}>
       {rows.map((r) => (
         <div key={r.personId} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(r.personId)}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -312,64 +314,108 @@ function KnotenTabelle({
   const rows = sortRows([...personen], sort, (p, key) =>
     key === "person" ? `${p.nachname} ${p.vorname}` : null,
   );
+  // Mobile: Kacheln sind standardmäßig eingeklappt (Oneliner-Übersicht), Caret klappt aus.
+  const [offeneKarten, setOffeneKarten] = useState<Set<number>>(new Set());
+  const toggleKarte = (id: number) =>
+    setOffeneKarten((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   return (
-    <div className="hidden lg:block" style={{ padding: "0 18px" }}>
-      <table className="table knoten">
-        <thead>
-          <tr>
-            <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
-            <th>Knoten</th>
-            <th style={{ textAlign: "center" }}>Bestzeit</th>
-            <th style={{ textAlign: "center" }}>Ø Zeit</th>
-            <th style={{ textAlign: "center" }}>Letzte</th>
-            <th>Verlauf</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((p, pi) => {
-            const notiz = eintragByPerson.get(p.id)?.notiz;
-            return knoten.map((kn, i) => {
-              const agg = aggFor(messungen, p.id, disziplinIdByName.get(kn));
-              return (
-                <tr key={`${p.id}:${kn}`} className={i === 0 && pi > 0 ? "grp-start" : undefined} onClick={() => onOpen(p.id)} style={{ cursor: "pointer" }}>
-                  {i === 0 && (
-                    <td rowSpan={knoten.length} style={{ fontSize: 14, fontWeight: 500, verticalAlign: "top", borderRight: "1px solid var(--color-divider)" }}>
-                      {personName(p)}
-                      {notiz && <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 4, maxWidth: 160 }}><i className="ph ph-note" /> {notiz}</div>}
-                    </td>
-                  )}
-                  <td style={{ fontSize: 13 }}>{kn}</td>
-                  <td style={{ textAlign: "center" }}>{agg ? <b style={{ color: "var(--color-accent-200)" }}>{agg.best}s</b> : "—"}</td>
-                  <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{agg ? `${agg.avg.toFixed(1)}s` : "—"}</td>
-                  <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{agg ? `${agg.last}s` : "—"}</td>
-                  <td>{agg ? <Sparkline werte={agg.werte} /> : <span style={{ color: "var(--color-neutral-600)" }}>—</span>}</td>
-                </tr>
-              );
-            });
-          })}
-        </tbody>
-      </table>
-
-      {/* Mobile */}
-      <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "4px 0 16px" }}>
-        {rows.map((p) => {
-          return (
-            <div key={p.id} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(p.id)}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{personName(p)}</div>
-              {knoten.map((kn) => {
+    <>
+      <div className="hidden lg:block" style={{ padding: "0 18px" }}>
+        <table className="table knoten">
+          <thead>
+            <tr>
+              <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
+              <th>Knoten</th>
+              <th style={{ textAlign: "center" }}>Bestzeit</th>
+              <th style={{ textAlign: "center" }}>Ø Zeit</th>
+              <th style={{ textAlign: "center" }}>Letzte</th>
+              <th>Verlauf</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p, pi) => {
+              const notiz = eintragByPerson.get(p.id)?.notiz;
+              return knoten.map((kn, i) => {
                 const agg = aggFor(messungen, p.id, disziplinIdByName.get(kn));
                 return (
-                  <div key={kn} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "3px 0" }}>
-                    <span style={{ flex: 1, color: "var(--color-neutral-300)" }}>{kn}</span>
-                    <span style={{ color: "var(--color-accent-200)", fontWeight: 600 }}>{agg ? `${agg.best}s` : "—"}</span>
-                  </div>
+                  <tr key={`${p.id}:${kn}`} className={i === 0 && pi > 0 ? "grp-start" : undefined} onClick={() => onOpen(p.id)} style={{ cursor: "pointer" }}>
+                    {i === 0 && (
+                      <td rowSpan={knoten.length} style={{ fontSize: 14, fontWeight: 500, verticalAlign: "top", borderRight: "1px solid var(--color-divider)" }}>
+                        {personName(p)}
+                        {notiz && <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 4, maxWidth: 160 }}><i className="ph ph-note" /> {notiz}</div>}
+                      </td>
+                    )}
+                    <td style={{ fontSize: 13 }}>{kn}</td>
+                    <td style={{ textAlign: "center" }}>{agg ? <b style={{ color: "var(--color-accent-200)" }}>{agg.best}s</b> : "—"}</td>
+                    <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{agg ? `${agg.avg.toFixed(1)}s` : "—"}</td>
+                    <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{agg ? `${agg.last}s` : "—"}</td>
+                    <td>{agg ? <Sparkline werte={agg.werte} /> : <span style={{ color: "var(--color-neutral-600)" }}>—</span>}</td>
+                  </tr>
                 );
-              })}
+              });
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile */}
+      <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "14px 14px 16px" }}>
+        {rows.map((p) => {
+          const notiz = eintragByPerson.get(p.id)?.notiz;
+          const offen = offeneKarten.has(p.id);
+          const aggs = knoten.map((kn) => ({ kn, agg: aggFor(messungen, p.id, disziplinIdByName.get(kn)) }));
+          return (
+            <div key={p.id} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(p.id)}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{personName(p)}</span>
+                <button
+                  aria-label={offen ? "Einklappen" : "Ausklappen"}
+                  onClick={(e) => { e.stopPropagation(); toggleKarte(p.id); }}
+                  style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--color-neutral-500)", padding: 4, display: "grid", placeItems: "center" }}
+                >
+                  <i className={`ph ph-caret-${offen ? "up" : "down"}`} />
+                </button>
+              </div>
+
+              {offen ? (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 10, color: "var(--color-neutral-500)", paddingBottom: 2 }}>
+                    <span style={{ flex: 1 }} />
+                    <span style={{ width: 46, textAlign: "right" }}>Best</span>
+                    <span style={{ width: 46, textAlign: "right" }}>Ø</span>
+                    <span style={{ width: 46, textAlign: "right" }}>Letzte</span>
+                  </div>
+                  {aggs.map(({ kn, agg }) => (
+                    <div key={kn} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, padding: "3px 0" }}>
+                      <span style={{ flex: 1, color: "var(--color-neutral-300)" }}>{kn}</span>
+                      <span style={{ width: 46, textAlign: "right", color: "var(--color-accent-200)", fontWeight: 600 }}>{agg ? `${agg.best}s` : "—"}</span>
+                      <span style={{ width: 46, textAlign: "right", color: "var(--color-neutral-400)" }}>{agg ? `${agg.avg.toFixed(1)}s` : "—"}</span>
+                      <span style={{ width: 46, textAlign: "right", color: "var(--color-neutral-400)" }}>{agg ? `${agg.last}s` : "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 8 }}>
+                  {aggs.map(({ kn, agg }) => (
+                    <span key={kn} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+                      <KnotenKuerzel kn={kn} />
+                      <span style={{ color: agg ? "var(--color-accent-200)" : "var(--color-neutral-500)", fontWeight: 600 }}>{agg ? `${agg.best}s` : "—"}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {notiz && <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 7, paddingTop: 7, borderTop: "1px solid var(--color-divider)" }}><i className="ph ph-note" /> {notiz}</div>}
             </div>
           );
         })}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -478,34 +524,59 @@ function LeinbeutelTabelle({
   });
   const pct = (q: number | null) => (q == null ? "—" : `${Math.round(q * 100)} %`);
   return (
-    <div style={{ padding: "0 18px" }}>
-      <table className="table">
-        <thead>
-          <tr>
-            <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
-            <Th sortKey="wuerfe" sort={sort} onSort={toggle} align="center">Würfe</Th>
-            <Th sortKey="treffer" sort={sort} onSort={toggle} align="center">Treffer</Th>
-            <Th sortKey="zukurz" sort={sort} onSort={toggle} align="center">zu kurz</Th>
-            <Th sortKey="vorbei" sort={sort} onSort={toggle} align="center">vorbei</Th>
-            <Th sortKey="quote" sort={sort} onSort={toggle} align="center">Quote</Th>
-            <Th sortKey="notiz" sort={sort} onSort={toggle}>Notiz</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((r) => (
-            <tr key={r.p.id} onClick={() => onOpen(r.p.id)} style={{ cursor: "pointer" }}>
-              <td style={{ fontSize: 14 }}>{personName(r.p)}</td>
-              <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total || "—"}</td>
-              <td style={{ textAlign: "center" }}>{r.stats.total ? <b style={{ color: "var(--color-accent-200)" }}>{r.stats.treffer}</b> : "—"}</td>
-              <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total ? r.stats.zuKurz : "—"}</td>
-              <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total ? r.stats.vorbei : "—"}</td>
-              <td style={{ textAlign: "center", fontWeight: 600 }}>{pct(r.stats.quote)}</td>
-              <td style={{ fontSize: 13, color: "var(--color-neutral-400)", maxWidth: 200 }}>{r.note || "—"}</td>
+    <>
+      <div className="hidden lg:block" style={{ padding: "0 18px" }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <Th sortKey="person" sort={sort} onSort={toggle}>Person</Th>
+              <Th sortKey="wuerfe" sort={sort} onSort={toggle} align="center">Würfe</Th>
+              <Th sortKey="treffer" sort={sort} onSort={toggle} align="center">Treffer</Th>
+              <Th sortKey="zukurz" sort={sort} onSort={toggle} align="center">zu kurz</Th>
+              <Th sortKey="vorbei" sort={sort} onSort={toggle} align="center">vorbei</Th>
+              <Th sortKey="quote" sort={sort} onSort={toggle} align="center">Quote</Th>
+              <Th sortKey="notiz" sort={sort} onSort={toggle}>Notiz</Th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {sorted.map((r) => (
+              <tr key={r.p.id} onClick={() => onOpen(r.p.id)} style={{ cursor: "pointer" }}>
+                <td style={{ fontSize: 14 }}>{personName(r.p)}</td>
+                <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total || "—"}</td>
+                <td style={{ textAlign: "center" }}>{r.stats.total ? <b style={{ color: "var(--color-accent-200)" }}>{r.stats.treffer}</b> : "—"}</td>
+                <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total ? r.stats.zuKurz : "—"}</td>
+                <td style={{ textAlign: "center", color: "var(--color-neutral-400)" }}>{r.stats.total ? r.stats.vorbei : "—"}</td>
+                <td style={{ textAlign: "center", fontWeight: 600 }}>{pct(r.stats.quote)}</td>
+                <td style={{ fontSize: 13, color: "var(--color-neutral-400)", maxWidth: 200 }}>{r.note || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile */}
+      <div className="flex flex-col gap-2 lg:hidden" style={{ padding: "14px 14px 16px" }}>
+        {sorted.map((r) => (
+          <div key={r.p.id} className="panel" style={{ padding: "12px 14px", cursor: "pointer" }} onClick={() => onOpen(r.p.id)}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{personName(r.p)}</span>
+              {r.stats.total > 0 && <span style={{ font: "600 15px/1 var(--font-heading)", color: "var(--color-accent-200)" }}>{pct(r.stats.quote)}</span>}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 9, paddingTop: 9, borderTop: "1px solid var(--color-divider)" }}>
+              {r.stats.total > 0 ? (
+                <>
+                  <div><span style={{ font: "600 15px/1 var(--font-heading)" }}>{r.stats.treffer}/{r.stats.total}</span> <span style={{ fontSize: 10, color: "var(--color-neutral-500)" }}>Treffer</span></div>
+                  <div><span style={{ font: "600 14px/1 var(--font-heading)" }}>{r.stats.zuKurz}·{r.stats.vorbei}</span> <span style={{ fontSize: 10, color: "var(--color-neutral-500)" }}>zu kurz · vorbei</span></div>
+                </>
+              ) : (
+                <span style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Noch keine Würfe — tippen zum Erfassen</span>
+              )}
+            </div>
+            {r.note && <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 7 }}><i className="ph ph-note" /> {r.note}</div>}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -599,8 +670,8 @@ function LeinbeutelDialog({
         )}
       </div>
 
-      {wuerfe.length > 0 && (
-        <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
+      <div className="dialog-scroll-body">
+        {wuerfe.length > 0 ? (
           <table className="table">
             <thead>
               <tr><th>Datum</th><th>Ergebnis</th><th style={{ width: 40 }} /></tr>
@@ -621,8 +692,10 @@ function LeinbeutelDialog({
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        ) : (
+          <div style={{ fontSize: 13, color: "var(--color-neutral-500)", padding: "16px 4px", textAlign: "center" }}>Noch keine Würfe erfasst.</div>
+        )}
+      </div>
 
       <div className="dialog-actions" style={{ position: "sticky", bottom: 0, zIndex: 1, background: "var(--color-surface)", paddingTop: 8 }}>
         <button className="btn btn-secondary" onClick={async () => { await saveNotiz(); onChanged(); onClose(); }}>Schließen</button>
@@ -645,6 +718,22 @@ function Sparkline({ werte, w = 88, h = 26 }: { werte: number[]; w?: number; h?:
 
 function fmtDatum(iso: string) {
   return fmtDate(iso);
+}
+
+// Kürzel für einen Knoten (Anfangsbuchstabe als eckiges Icon – wie J/B bei Personen)
+function KnotenKuerzel({ kn }: { kn: string }) {
+  return (
+    <span
+      title={kn}
+      style={{
+        width: 18, height: 18, flex: "none", borderRadius: 5, display: "inline-grid", placeItems: "center",
+        fontSize: 10, fontWeight: 700,
+        background: "var(--color-neutral-800)", color: "var(--color-neutral-200)",
+      }}
+    >
+      {kn.charAt(0)}
+    </span>
+  );
 }
 
 // ── Dialoge ──
@@ -725,8 +814,8 @@ function ZeitDialog({
         </div>
       </div>
 
-      {eintraege.length > 0 && (
-        <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
+      <div className="dialog-scroll-body">
+        {eintraege.length > 0 ? (
           <table className="table">
             <thead>
               <tr><th>Datum</th><th style={{ textAlign: "center" }}>Zeit</th><th style={{ width: 40 }} /></tr>
@@ -745,8 +834,10 @@ function ZeitDialog({
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        ) : (
+          <div style={{ fontSize: 13, color: "var(--color-neutral-500)", padding: "16px 4px", textAlign: "center" }}>Noch keine Zeiten erfasst.</div>
+        )}
+      </div>
 
       <div className="dialog-actions" style={{ position: "sticky", bottom: 0, zIndex: 1, background: "var(--color-surface)", paddingTop: 8 }}>
         <button className="btn btn-secondary" onClick={async () => { await saveNotiz(); onChanged(); onClose(); }}>Schließen</button>
@@ -845,7 +936,7 @@ function KnotenDialog({
         </div>
       </div>
 
-      <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
+      <div className="dialog-scroll-body">
         {modus === "eingabe" ? (
           <>
             <div className="field" style={{ marginTop: 4 }}>
@@ -882,7 +973,7 @@ function KnotenDialog({
             <tbody>
               {sortedZeilen.map(({ m, kn, best }) => (
                 <tr key={m.id}>
-                  <td style={{ fontSize: 13 }}>{kn}</td>
+                  <td><KnotenKuerzel kn={kn} /></td>
                   <td style={{ whiteSpace: "nowrap" }}>{fmtDatum(m.datum)}</td>
                   <td style={{ textAlign: "center" }}><b style={{ color: m.wertSekunden === best ? "var(--color-accent-200)" : "inherit" }}>{m.wertSekunden}s</b></td>
                   <td style={{ textAlign: "center" }}>
