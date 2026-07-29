@@ -163,7 +163,6 @@ export default function TerminePage() {
                     <div style={{ fontSize: 11, color: "var(--color-neutral-500)", marginTop: 1 }}>{zusagen}/{ziel.length} Zusagen</div>
                   </div>
                   <ModeTag modus={t.planungsmodus} short />
-                  <i className="ph ph-pencil-simple" style={{ color: "var(--color-neutral-600)" }} />
                 </button>
               );
             })}
