@@ -550,7 +550,7 @@ function LeinbeutelDialog({
   }
 
   return (
-    <Dialog title={`${personName(person)} — Leinbeutelwerfen`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }}>
+    <Dialog title={`${personName(person)} — Leinbeutelwerfen`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }} fullscreenMobile>
       <div style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)", display: "flex", flexDirection: "column", gap: 12, paddingBottom: 4 }}>
         {stats.total > 0 && (
           <div style={{ display: "flex", gap: 18 }}>
@@ -691,7 +691,7 @@ function ZeitDialog({
   }
 
   return (
-    <Dialog title={`${personName(person)} — ${kat.label}`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }}>
+    <Dialog title={`${personName(person)} — ${kat.label}`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }} fullscreenMobile>
       <div style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)", display: "flex", flexDirection: "column", gap: 12, paddingBottom: 4 }}>
         <div className="field">
           <label>Notiz (pro Person)</label>
@@ -821,7 +821,7 @@ function KnotenDialog({
   const hatEingabe = knoten.some((kn) => werte[kn]);
 
   return (
-    <Dialog title={`${personName(person)} — Knoten`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }}>
+    <Dialog title={`${personName(person)} — Knoten`} onClose={async () => { await saveNotiz(); onChanged(); onClose(); }} fullscreenMobile>
       <div style={{ position: "sticky", top: 0, zIndex: 1, background: "var(--color-surface)", display: "flex", flexDirection: "column", gap: 12, paddingBottom: 4 }}>
         <div className="field">
           <label>Notiz (pro Person)</label>

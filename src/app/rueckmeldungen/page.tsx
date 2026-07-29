@@ -220,7 +220,7 @@ export default function RueckmeldungenPage() {
       )}
 
       {neuerTyp !== null && (
-        <Dialog title="Checkliste hinzufügen" onClose={() => setNeuerTyp(null)}>
+        <Dialog title="Checkliste hinzufügen" onClose={() => setNeuerTyp(null)} fullscreenMobile>
           <div className="field">
             <label>Name</label>
             <input className="input" autoFocus placeholder="z. B. Gesundheitsbogen Zeltlager" value={neuerTyp.name} onChange={(e) => setNeuerTyp({ ...neuerTyp, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addTyp()} />

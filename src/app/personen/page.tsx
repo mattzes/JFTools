@@ -401,7 +401,7 @@ export default function PersonenPage() {
 
       {/* Formular-Dialog */}
       {form && (
-        <Dialog title={form.id ? "Person bearbeiten" : "Neue Person"} onClose={() => setForm(null)}>
+        <Dialog title={form.id ? "Person bearbeiten" : "Neue Person"} onClose={() => setForm(null)} fullscreenMobile>
           <div style={{ display: "flex", gap: 8 }}>
             {(["jugendlich", "betreuer"] as const).map((r) => (
               <button key={r} className="seg-opt" data-on={form.rolle === r} style={{ flex: 1, justifyContent: "center", border: "1px solid var(--color-divider)", borderRadius: 8 }} onClick={() => setForm({ ...form, rolle: r })}>

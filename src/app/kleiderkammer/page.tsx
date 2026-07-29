@@ -304,7 +304,7 @@ export default function KleiderkammerPage() {
 
       {/* Dialog: Kleidungsstück anlegen */}
       {neuStueck && (
-        <Dialog title="Kleidungsstück hinzufügen" onClose={() => setNeuStueck(null)}>
+        <Dialog title="Kleidungsstück hinzufügen" onClose={() => setNeuStueck(null)} fullscreenMobile>
           <div className="field">
             <label>Bezeichnung</label>
             <input
@@ -396,7 +396,7 @@ export default function KleiderkammerPage() {
 
       {/* Dialog: Umbenennen */}
       {renameForm && (
-        <Dialog title="Kleidungsstück umbenennen" onClose={() => setRenameForm(null)}>
+        <Dialog title="Kleidungsstück umbenennen" onClose={() => setRenameForm(null)} fullscreenMobile>
           <div className="field">
             <label>Bezeichnung</label>
             <input
@@ -465,7 +465,7 @@ export default function KleiderkammerPage() {
 
       {/* Dialog: Utensil ausgeben */}
       {ausgabeForm && selPerson && (
-        <Dialog title={`Utensil ausgeben — ${personName(selPerson)}`} onClose={() => setAusgabeForm(null)}>
+        <Dialog title={`Utensil ausgeben — ${personName(selPerson)}`} onClose={() => setAusgabeForm(null)} fullscreenMobile>
           <div className="field">
             <label>Kleidungsstück</label>
             <select
@@ -543,7 +543,7 @@ export default function KleiderkammerPage() {
 
       {/* Dialog: Größe tauschen */}
       {tauschForm && tauschStueck && (
-        <Dialog title={`Größe tauschen — ${tauschStueck.name}`} onClose={() => setTauschForm(null)}>
+        <Dialog title={`Größe tauschen — ${tauschStueck.name}`} onClose={() => setTauschForm(null)} fullscreenMobile>
           <div style={{ fontSize: 13, color: "var(--color-neutral-500)", marginBottom: 4 }}>
             Aktuell: Größe {tauschForm.ausgabe.groesse ?? "—"} × {tauschForm.ausgabe.menge}
           </div>

@@ -196,7 +196,7 @@ function PersonDialog({
   onPatch: (id: number, body: Record<string, unknown>) => void;
 }) {
   return (
-    <Dialog title={`Abzeichen — ${personName(person)}`} onClose={onClose}>
+    <Dialog title={`Abzeichen — ${personName(person)}`} onClose={onClose} fullscreenMobile>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 22px", padding: "10px 12px", background: "var(--color-bg)", borderRadius: 9, marginBottom: 4 }}>
         {([
           ["Geburtsdatum", person.geburtsdatum ? fmtDate(person.geburtsdatum) : "—"],
