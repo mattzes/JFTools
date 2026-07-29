@@ -643,7 +643,7 @@ function BestandAnsicht({
         const gesamt = rows.reduce((n, b) => n + b.menge, 0);
         const ausgegeben = rows.reduce((n, b) => n + issued(b.kleidungsstueckId, b.groesse), 0);
         return (
-          <div key={s.id} className="panel">
+          <div key={s.id} className="panel" style={{ flexShrink: 0 }}>
             <div className="panel-h" style={{ justifyContent: "space-between" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
                 <span style={{ width: 34, height: 34, flex: "none", borderRadius: 9, display: "grid", placeItems: "center", fontSize: 18, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
