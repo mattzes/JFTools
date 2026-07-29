@@ -601,7 +601,7 @@ function LeinbeutelDialog({
 
       {wuerfe.length > 0 && (
         <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
-          <table className="table" style={{ marginTop: 4 }}>
+          <table className="table">
             <thead>
               <tr><th>Datum</th><th>Ergebnis</th><th style={{ width: 40 }} /></tr>
             </thead>
@@ -727,7 +727,7 @@ function ZeitDialog({
 
       {eintraege.length > 0 && (
         <div style={{ overflowY: "auto", maxHeight: "45vh", margin: "0 -4px", padding: "0 4px" }}>
-          <table className="table" style={{ marginTop: 4 }}>
+          <table className="table">
             <thead>
               <tr><th>Datum</th><th style={{ textAlign: "center" }}>Zeit</th><th style={{ width: 40 }} /></tr>
             </thead>
@@ -870,7 +870,7 @@ function KnotenDialog({
         ) : zeilen.length === 0 ? (
           <div style={{ fontSize: 13, color: "var(--color-neutral-500)", padding: "16px 4px", textAlign: "center" }}>Noch keine Zeiten erfasst.</div>
         ) : (
-          <table className="table" style={{ marginTop: 4 }}>
+          <table className="table">
             <thead>
               <tr>
                 <Th sortKey="knoten" sort={sort} onSort={toggle}>Knoten</Th>

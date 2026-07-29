@@ -293,6 +293,14 @@ export default function KleiderkammerPage() {
             Kleidungsstück hinzufügen
           </button>
         )}
+        {modus === "ausgabe" && (
+          <input
+            className={`input input-search${selPerson ? " hidden lg:block" : ""}`}
+            placeholder="Suchen …"
+            value={suche}
+            onChange={(e) => setSuche(e.target.value)}
+          />
+        )}
       </PageHeader>
 
       {modus === "bestand" ? (
@@ -306,8 +314,6 @@ export default function KleiderkammerPage() {
       ) : (
         <AusgabeAnsicht
           jugendliche={jugendliche}
-          suche={suche}
-          setSuche={setSuche}
           selPerson={selPerson}
           setSelPersonId={setSelPersonId}
           personAusgaben={personAusgaben}
@@ -733,8 +739,6 @@ function BestandAnsicht({
 // ── Ausgabe-je-Person-Ansicht ──
 function AusgabeAnsicht({
   jugendliche,
-  suche,
-  setSuche,
   selPerson,
   setSelPersonId,
   personAusgaben,
@@ -747,8 +751,6 @@ function AusgabeAnsicht({
   onTauschen,
 }: {
   jugendliche: Person[];
-  suche: string;
-  setSuche: (v: string) => void;
   selPerson: Person | null;
   setSelPersonId: (id: number | null) => void;
   personAusgaben: KleidungAusgabe[];
@@ -799,11 +801,10 @@ function AusgabeAnsicht({
         }}
         className="hidden lg:flex"
       >
-        <div style={{ padding: "12px 14px 8px" }}>
-          <input className="input" placeholder="Jugendliche suchen…" value={suche} onChange={(e) => setSuche(e.target.value)} />
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 12px" }}>
-          {jugendliche.map((p) => {
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 8px" }}>
+          {jugendliche.length === 0 ? (
+            <div style={{ fontSize: 13, color: "var(--color-neutral-500)", padding: "8px 11px", textAlign: "center" }}>Niemand gefunden</div>
+          ) : jugendliche.map((p) => {
             const on = selPerson?.id === p.id;
             const n = anzahlProPerson(p.id);
             return (
@@ -830,11 +831,10 @@ function AusgabeAnsicht({
       {/* Mobile: volle Personen-Liste + Suche, solange niemand gewählt ist */}
       {!selPerson && (
         <div className="flex lg:hidden" style={{ flex: 1, minWidth: 0, flexDirection: "column", minHeight: 0 }}>
-          <div style={{ padding: "12px 16px 8px" }}>
-            <input className="input" placeholder="Jugendliche suchen…" value={suche} onChange={(e) => setSuche(e.target.value)} />
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 12px" }}>
-            {jugendliche.map((p) => {
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 8px" }}>
+            {jugendliche.length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--color-neutral-500)", padding: "8px 11px", textAlign: "center" }}>Niemand gefunden</div>
+            ) : jugendliche.map((p) => {
               const n = anzahlProPerson(p.id);
               return (
                 <button
