@@ -23,12 +23,14 @@ type GroessenZeile = { groesse: string; menge: string };
 type NeuStueck = { name: string; mitGroessen: boolean; menge: string; groessen: GroessenZeile[] };
 const EMPTY_STUECK: NeuStueck = { name: "", mitGroessen: false, menge: "", groessen: [{ groesse: "", menge: "" }] };
 
-type BestandForm = {
-  kleidungsstueckId: number;
+// Ein Dialog für alles: Bezeichnung, Bestand je Größe (bzw. gesamt), Löschen
+type EditZeile = { id: number | null; origGroesse: string; groesse: string; menge: string };
+type EditForm = {
+  id: number;
   name: string;
-  groesse: string; // leer = keine Unterteilung
-  groesseEditable: boolean; // true = neue Größe anlegen
-  menge: string;
+  mitGroessen: boolean;
+  groessen: EditZeile[]; // bei !mitGroessen: eine Zeile (groesse leer)
+  removed: number[]; // Bestand-IDs, die gelöscht werden sollen
 };
 
 type AusgabeForm = {
@@ -53,8 +55,7 @@ export default function KleiderkammerPage() {
   const [modusRaw, setModus] = useStoredState("kleiderkammer.modus", "bestand");
   const modus = modusRaw as Modus;
   const [neuStueck, setNeuStueck] = useState<NeuStueck | null>(null);
-  const [renameForm, setRenameForm] = useState<{ id: number; name: string } | null>(null);
-  const [bestandForm, setBestandForm] = useState<BestandForm | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [selPersonId, setSelPersonId] = useState<number | null>(null);
   const [suche, setSuche] = useState("");
   const [ausgabeForm, setAusgabeForm] = useState<AusgabeForm | null>(null);
@@ -132,56 +133,75 @@ export default function KleiderkammerPage() {
     reloadBestand();
   }
 
-  async function speichereBestand() {
-    if (!bestandForm) return;
-    const groesse = bestandForm.groesse.trim();
-    if (bestandForm.groesseEditable && groesse === "") return; // neue Größe braucht Namen
-    await api("/kleidung-bestand", {
-      method: "PUT",
-      body: JSON.stringify({
-        kleidungsstueckId: bestandForm.kleidungsstueckId,
-        groesse: groesse === "" ? null : groesse,
-        menge: Number(bestandForm.menge) || 0,
-      }),
+  function openEdit(s: Kleidungsstueck) {
+    const rows = bestandByStueck.get(s.id) ?? [];
+    setEditForm({
+      id: s.id,
+      name: s.name,
+      mitGroessen: s.mitGroessen,
+      groessen: s.mitGroessen
+        ? rows.map((b) => ({ id: b.id, origGroesse: b.groesse ?? "", groesse: b.groesse ?? "", menge: String(b.menge) }))
+        : [{ id: rows[0]?.id ?? null, origGroesse: "", groesse: "", menge: rows[0] ? String(rows[0].menge) : "" }],
+      removed: [],
     });
-    setBestandForm(null);
+  }
+
+  async function speichereEdit() {
+    if (!editForm || !editForm.name.trim()) return;
+    const orig = stueckById.get(editForm.id);
+
+    // 1. Umbenennung
+    if (orig && orig.name !== editForm.name.trim()) {
+      await api(`/kleidungsstuecke/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ name: editForm.name.trim() }) });
+    }
+
+    // 2. Explizit entfernte Größen löschen
+    for (const id of editForm.removed) {
+      await api(`/kleidung-bestand/${id}`, { method: "DELETE" });
+    }
+
+    // 3. Bestand je Größe (bzw. gesamt) upserten
+    if (editForm.mitGroessen) {
+      for (const g of editForm.groessen) {
+        const name = g.groesse.trim();
+        if (name === "") continue;
+        // Umbenannte Größe: alte Zeile entfernen, damit keine Waise bleibt
+        if (g.id != null && g.origGroesse !== name) {
+          await api(`/kleidung-bestand/${g.id}`, { method: "DELETE" });
+        }
+        await api("/kleidung-bestand", {
+          method: "PUT",
+          body: JSON.stringify({ kleidungsstueckId: editForm.id, groesse: name, menge: Number(g.menge) || 0 }),
+        });
+      }
+    } else {
+      const g = editForm.groessen[0];
+      await api("/kleidung-bestand", {
+        method: "PUT",
+        body: JSON.stringify({ kleidungsstueckId: editForm.id, groesse: null, menge: Number(g?.menge) || 0 }),
+      });
+    }
+
+    setEditForm(null);
+    reloadStuecke();
     reloadBestand();
   }
 
-  async function speichereRename() {
-    if (!renameForm || !renameForm.name.trim()) return;
-    await api(`/kleidungsstuecke/${renameForm.id}`, { method: "PATCH", body: JSON.stringify({ name: renameForm.name.trim() }) });
-    setRenameForm(null);
-    reloadStuecke();
-  }
-
-  async function loescheStueck(s: Kleidungsstueck) {
+  async function loescheStueckAusEdit() {
+    if (!editForm) return;
     if (
       await confirm({
         title: "Kleidungsstück löschen",
-        message: `„${s.name}" samt Bestand und allen Ausgaben löschen?`,
+        message: `„${editForm.name}" samt Bestand und allen Ausgaben löschen?`,
         confirmLabel: "Löschen",
         danger: true,
       })
     ) {
-      await api(`/kleidungsstuecke/${s.id}`, { method: "DELETE" });
+      await api(`/kleidungsstuecke/${editForm.id}`, { method: "DELETE" });
+      setEditForm(null);
       reloadStuecke();
       reloadBestand();
       reloadAusgaben();
-    }
-  }
-
-  async function loescheGroesse(b: KleidungBestand) {
-    if (
-      await confirm({
-        title: "Größe entfernen",
-        message: `Größe „${b.groesse}" entfernen?`,
-        confirmLabel: "Entfernen",
-        danger: true,
-      })
-    ) {
-      await api(`/kleidung-bestand/${b.id}`, { method: "DELETE" });
-      reloadBestand();
     }
   }
 
@@ -276,13 +296,7 @@ export default function KleiderkammerPage() {
           bestandByStueck={bestandByStueck}
           issued={issued}
           verfuegbar={verfuegbar}
-          onRename={(s) => setRenameForm({ id: s.id, name: s.name })}
-          onDeleteStueck={loescheStueck}
-          onAddGroesse={(s) => setBestandForm({ kleidungsstueckId: s.id, name: s.name, groesse: "", groesseEditable: true, menge: "" })}
-          onEditBestand={(s, b) =>
-            setBestandForm({ kleidungsstueckId: s.id, name: s.name, groesse: b.groesse ?? "", groesseEditable: false, menge: String(b.menge) })
-          }
-          onDeleteGroesse={loescheGroesse}
+          onEdit={openEdit}
         />
       ) : (
         <AusgabeAnsicht
@@ -394,71 +408,98 @@ export default function KleiderkammerPage() {
         </Dialog>
       )}
 
-      {/* Dialog: Umbenennen */}
-      {renameForm && (
-        <Dialog title="Kleidungsstück umbenennen" onClose={() => setRenameForm(null)} fullscreenMobile>
+      {/* Dialog: Kleidungsstück bearbeiten – alles in einem */}
+      {editForm && (
+        <Dialog title="Kleidungsstück bearbeiten" onClose={() => setEditForm(null)} fullscreenMobile>
           <div className="field">
             <label>Bezeichnung</label>
             <input
               className="input"
               autoFocus
-              value={renameForm.name}
-              onChange={(e) => setRenameForm({ ...renameForm, name: e.target.value })}
-              onKeyDown={(e) => e.key === "Enter" && speichereRename()}
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
             />
           </div>
-          <div className="dialog-actions">
-            <button className="btn btn-secondary" onClick={() => setRenameForm(null)}>Abbrechen</button>
-            <button className="btn btn-primary" onClick={speichereRename} disabled={!renameForm.name.trim()}>Speichern</button>
-          </div>
-        </Dialog>
-      )}
 
-      {/* Dialog: Bestand ändern / Größe hinzufügen */}
-      {bestandForm && (
-        <Dialog
-          title={bestandForm.groesseEditable ? `Größe hinzufügen — ${bestandForm.name}` : `Bestand ändern — ${bestandForm.name}`}
-          onClose={() => setBestandForm(null)}
-        >
-          {bestandForm.groesseEditable ? (
+          {editForm.mitGroessen ? (
             <div className="field">
-              <label>Größe</label>
-              <input
-                className="input"
-                autoFocus
-                placeholder="z. B. 152, S, 42"
-                value={bestandForm.groesse}
-                onChange={(e) => setBestandForm({ ...bestandForm, groesse: e.target.value })}
-              />
+              <label>Größen & Bestand</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {editForm.groessen.map((g, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8 }}>
+                    <input
+                      className="input"
+                      placeholder="Größe (z. B. 152, S, 42)"
+                      value={g.groesse}
+                      onChange={(e) => {
+                        const groessen = [...editForm.groessen];
+                        groessen[i] = { ...g, groesse: e.target.value };
+                        setEditForm({ ...editForm, groessen });
+                      }}
+                    />
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      placeholder="Menge"
+                      style={{ maxWidth: 110 }}
+                      value={g.menge}
+                      onChange={(e) => {
+                        const groessen = [...editForm.groessen];
+                        groessen[i] = { ...g, menge: e.target.value };
+                        setEditForm({ ...editForm, groessen });
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      aria-label="Größe entfernen"
+                      onClick={() =>
+                        setEditForm({
+                          ...editForm,
+                          groessen: editForm.groessen.filter((_, j) => j !== i),
+                          removed: g.id != null ? [...editForm.removed, g.id] : editForm.removed,
+                        })
+                      }
+                    >
+                      <i className="ph ph-x" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ alignSelf: "flex-start", marginTop: 6 }}
+                onClick={() => setEditForm({ ...editForm, groessen: [...editForm.groessen, { id: null, origGroesse: "", groesse: "", menge: "" }] })}
+              >
+                <i className="ph ph-plus" /> Größe hinzufügen
+              </button>
             </div>
           ) : (
-            bestandForm.groesse !== "" && (
-              <div className="field">
-                <label>Größe</label>
-                <input className="input" value={bestandForm.groesse} disabled />
-              </div>
-            )
+            <div className="field">
+              <label>Gesamtbestand</label>
+              <input
+                className="input"
+                type="number"
+                min={0}
+                value={editForm.groessen[0]?.menge ?? ""}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    groessen: [{ ...(editForm.groessen[0] ?? { id: null, origGroesse: "", groesse: "" }), menge: e.target.value }],
+                  })
+                }
+              />
+            </div>
           )}
-          <div className="field">
-            <label>Gesamtbestand</label>
-            <input
-              className="input"
-              type="number"
-              min={0}
-              autoFocus={!bestandForm.groesseEditable}
-              value={bestandForm.menge}
-              onChange={(e) => setBestandForm({ ...bestandForm, menge: e.target.value })}
-            />
-          </div>
+
           <div className="dialog-actions">
-            <button className="btn btn-secondary" onClick={() => setBestandForm(null)}>Abbrechen</button>
-            <button
-              className="btn btn-primary"
-              onClick={speichereBestand}
-              disabled={bestandForm.groesseEditable && bestandForm.groesse.trim() === ""}
-            >
-              Speichern
+            <button className="btn btn-danger" style={{ marginRight: "auto" }} onClick={loescheStueckAusEdit}>
+              <i className="ph ph-trash" /> Löschen
             </button>
+            <button className="btn btn-secondary" onClick={() => setEditForm(null)}>Abbrechen</button>
+            <button className="btn btn-primary" onClick={speichereEdit} disabled={!editForm.name.trim()}>Speichern</button>
           </div>
         </Dialog>
       )}
@@ -617,21 +658,13 @@ function BestandAnsicht({
   bestandByStueck,
   issued,
   verfuegbar,
-  onDeleteStueck,
-  onAddGroesse,
-  onEditBestand,
-  onDeleteGroesse,
-  onRename,
+  onEdit,
 }: {
   stuecke: Kleidungsstueck[];
   bestandByStueck: Map<number, KleidungBestand[]>;
   issued: (stueckId: number, groesse: string | null) => number;
   verfuegbar: (b: KleidungBestand) => number;
-  onDeleteStueck: (s: Kleidungsstueck) => void;
-  onAddGroesse: (s: Kleidungsstueck) => void;
-  onEditBestand: (s: Kleidungsstueck, b: KleidungBestand) => void;
-  onDeleteGroesse: (b: KleidungBestand) => void;
-  onRename?: (s: Kleidungsstueck) => void;
+  onEdit: (s: Kleidungsstueck) => void;
 }) {
   if (stuecke.length === 0) {
     return <Empty icon="ph-t-shirt" text="Noch keine Kleidungsstücke" hint="Lege oben ein Kleidungsstück an." />;
@@ -643,8 +676,14 @@ function BestandAnsicht({
         const gesamt = rows.reduce((n, b) => n + b.menge, 0);
         const ausgegeben = rows.reduce((n, b) => n + issued(b.kleidungsstueckId, b.groesse), 0);
         return (
-          <div key={s.id} className="panel" style={{ flexShrink: 0 }}>
-            <div className="panel-h" style={{ justifyContent: "space-between" }}>
+          <button
+            key={s.id}
+            type="button"
+            className="panel"
+            onClick={() => onEdit(s)}
+            style={{ flexShrink: 0, width: "100%", textAlign: "left", border: 0, background: "var(--color-surface)", color: "inherit", font: "inherit", cursor: "pointer" }}
+          >
+            <div className="panel-h">
               <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
                 <span style={{ width: 34, height: 34, flex: "none", borderRadius: 9, display: "grid", placeItems: "center", fontSize: 18, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
                   <i className="ph ph-t-shirt" />
@@ -658,38 +697,18 @@ function BestandAnsicht({
                   </span>
                 </span>
               </span>
-              <span style={{ display: "inline-flex", gap: 4 }}>
-                {s.mitGroessen && (
-                  <button className="btn btn-ghost" title="Größe hinzufügen" onClick={() => onAddGroesse(s)}>
-                    <i className="ph ph-plus" />
-                  </button>
-                )}
-                {onRename && (
-                  <button className="btn btn-ghost" title="Umbenennen" onClick={() => onRename(s)}>
-                    <i className="ph ph-pencil-simple" />
-                  </button>
-                )}
-                <button className="btn btn-ghost" style={{ color: "var(--danger)" }} title="Kleidungsstück löschen" onClick={() => onDeleteStueck(s)}>
-                  <i className="ph ph-trash" />
-                </button>
-              </span>
             </div>
 
             {rows.length === 0 ? (
               <div className="mrow" style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
-                Kein Bestand erfasst.{" "}
-                {s.mitGroessen ? (
-                  <button className="btn btn-ghost" onClick={() => onAddGroesse(s)}>Größe hinzufügen</button>
-                ) : (
-                  <button className="btn btn-ghost" onClick={() => onEditBestand(s, { id: 0, kleidungsstueckId: s.id, groesse: null, menge: 0 })}>Bestand setzen</button>
-                )}
+                Kein Bestand erfasst.
               </div>
             ) : (
               rows.map((b) => {
                 const aus = issued(b.kleidungsstueckId, b.groesse);
                 const verf = verfuegbar(b);
                 return (
-                  <div key={b.id} className="mrow" style={{ justifyContent: "space-between" }}>
+                  <div key={b.id} className="mrow">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                       <span style={{ fontSize: 13.5, fontWeight: 500, minWidth: 60 }}>{b.groesse ?? "Gesamt"}</span>
                       <span style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
@@ -697,21 +716,11 @@ function BestandAnsicht({
                         <span style={{ color: verf > 0 ? "var(--color-accent-300)" : "var(--warn)" }}>{verf} verfügbar</span>
                       </span>
                     </span>
-                    <span style={{ display: "inline-flex", gap: 4 }}>
-                      <button className="btn btn-ghost" title="Bestand ändern" onClick={() => onEditBestand(s, b)}>
-                        <i className="ph ph-pencil-simple" />
-                      </button>
-                      {s.mitGroessen && (
-                        <button className="btn btn-ghost" style={{ color: "var(--danger)" }} title="Größe entfernen" onClick={() => onDeleteGroesse(b)}>
-                          <i className="ph ph-x" />
-                        </button>
-                      )}
-                    </span>
                   </div>
                 );
               })
             )}
-          </div>
+          </button>
         );
       })}
     </div>
