@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { api, useApi, Person, Dokumententyp, Rueckmeldung, personName } from "@/lib/api";
 import { Dialog, Empty, PageHeader, Spinner, SortArrow, Th, useSort, sortRows } from "@/components/ui";
 import { ZIELGRUPPEN, Zielgruppe } from "@/lib/domain/constants";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const COLORS = ["var(--danger)", "var(--warn)", "var(--color-accent-400)", "var(--color-accent-2)"];
 
@@ -42,6 +43,7 @@ export default function RueckmeldungenPage() {
   const [mobilDok, setMobilDok] = useState<Dokumententyp | null>(null);
   const [editMode, setEditMode] = useState(false);
   const { sort, toggle: onSort } = useSort();
+  const confirm = useConfirm();
 
   const map = useMemo(() => {
     const m = new Map<string, Rueckmeldung>();
@@ -83,6 +85,14 @@ export default function RueckmeldungenPage() {
     reloadDoks();
   }
 
+  async function deleteDok(d: Dokumententyp) {
+    if (!(await confirm({ title: "Checkliste löschen", message: `„${d.name}“ wirklich löschen? Alle Rückmeldungen dazu gehen verloren.`, confirmLabel: "Löschen" }))) return;
+    await api(`/dokumententypen/${d.id}`, { method: "DELETE" });
+    setMobilDok(null);
+    reloadDoks();
+    reload();
+  }
+
   const stats = doks.map((d, i) => {
     const ziel = aktive.filter((p) => inZielgruppe(p, d.zielgruppe));
     const da = ziel.filter((p) => map.get(`${p.id}:${d.id}`)?.erhalten).length;
@@ -113,8 +123,14 @@ export default function RueckmeldungenPage() {
           {/* Übersichtskacheln */}
           <div className="hidden lg:flex gap-3 overflow-x-auto" style={{ padding: "16px 18px 8px" }}>
             {stats.map((d) => (
-              <div key={d.id} className="kpi" style={{ minWidth: 180, gap: 9 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+              <button
+                key={d.id}
+                className="kpi"
+                onClick={() => setMobilDok(d)}
+                title="Checkliste bearbeiten"
+                style={{ minWidth: 180, gap: 9, textAlign: "left", color: "inherit", font: "inherit", border: 0, cursor: "pointer" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, width: "100%" }}>
                   <span style={{ fontSize: 12.5, fontWeight: 500 }}>{d.name}</span>
                   {d.zielgruppe !== "alle" && (
                     <span className="ph-tag" style={{ background: "var(--color-neutral-800)", color: "var(--color-neutral-300)", fontSize: 9.5 }}>{ZIEL_LABEL[d.zielgruppe]}</span>
@@ -124,8 +140,8 @@ export default function RueckmeldungenPage() {
                   <span className="kpi-n" style={{ fontSize: 22 }}>{d.da}</span>
                   <span style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>/ {d.ges} erhalten</span>
                 </div>
-                <div className="av-bar"><div className="av-fill" style={{ width: `${d.pct}%`, background: d.color }} /></div>
-              </div>
+                <div className="av-bar" style={{ width: "100%" }}><div className="av-fill" style={{ width: `${d.pct}%`, background: d.color }} /></div>
+              </button>
             ))}
           </div>
 
@@ -206,7 +222,7 @@ export default function RueckmeldungenPage() {
                 className="panel"
                 onClick={() => setMobilDok(d)}
                 title="Checkliste bearbeiten"
-                style={{ padding: "14px 16px", textAlign: "left", color: "inherit", font: "inherit", cursor: "pointer", width: "100%" }}
+                style={{ padding: "14px 16px", textAlign: "left", color: "inherit", font: "inherit", border: 0, cursor: "pointer", width: "100%" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
@@ -281,6 +297,10 @@ export default function RueckmeldungenPage() {
               })}
           </div>
           <div className="dialog-actions">
+            <button className="btn btn-danger" style={{ marginRight: "auto" }} onClick={() => deleteDok(mobilDok)}>
+              <i className="ph ph-trash" />
+              Löschen
+            </button>
             <button className="btn btn-primary" onClick={() => setMobilDok(null)}>
               <i className="ph ph-check" />
               Fertig
