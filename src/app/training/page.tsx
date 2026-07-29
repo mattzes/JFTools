@@ -78,7 +78,19 @@ export default function TrainingPage() {
     <>
       {/* Kategorie-Umschaltung in der Kopfzeile (segmentiert wie Matrix/Liste bei Terminen) */}
       <PageHeader title="Training" sub="Leistungen der Jugendlichen erfassen und im Blick behalten">
-        <div style={{ overflowX: "auto", maxWidth: "100%" }}>
+        {/* Mobil: Disziplin als Dropdown */}
+        <select
+          className="input lg:hidden"
+          style={{ flex: 1, minWidth: 0 }}
+          value={kat.key}
+          onChange={(e) => setAktiveKey(e.target.value)}
+        >
+          {TRAINING_KATEGORIEN.map((k) => (
+            <option key={k.key} value={k.key}>{k.label}</option>
+          ))}
+        </select>
+        {/* Desktop: segmentierte Umschaltung */}
+        <div className="hidden lg:block" style={{ overflowX: "auto", maxWidth: "100%" }}>
           <div className="seg" style={{ fontSize: 12 }}>
             {TRAINING_KATEGORIEN.map((k) => (
               <button
