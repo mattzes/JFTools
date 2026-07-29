@@ -107,7 +107,7 @@ export default function RueckmeldungenPage() {
       ) : (
         <div style={{ flex: 1, overflowY: "auto" }}>
           {/* Übersichtskacheln */}
-          <div className="flex gap-3 overflow-x-auto" style={{ padding: "16px 18px 8px" }}>
+          <div className="hidden lg:flex gap-3 overflow-x-auto" style={{ padding: "16px 18px 8px" }}>
             {stats.map((d) => (
               <div key={d.id} className="kpi" style={{ minWidth: 180, gap: 9 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
@@ -195,7 +195,7 @@ export default function RueckmeldungenPage() {
           </div>
 
           {/* Mobile: pro Dokumenttyp eine Karte */}
-          <div className="flex flex-col gap-3 lg:hidden" style={{ padding: "6px 16px 16px" }}>
+          <div className="flex flex-col gap-3 lg:hidden" style={{ padding: "16px 16px 16px" }}>
             {stats.map((d) => (
               <div key={d.id} className="panel" style={{ padding: "14px 16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
@@ -220,7 +220,7 @@ export default function RueckmeldungenPage() {
       )}
 
       {neuerTyp !== null && (
-        <Dialog title="Checkliste hinzufügen" onClose={() => setNeuerTyp(null)} fullscreenMobile>
+        <Dialog title="Checkliste hinzufügen" onClose={() => setNeuerTyp(null)}>
           <div className="field">
             <label>Name</label>
             <input className="input" autoFocus placeholder="z. B. Gesundheitsbogen Zeltlager" value={neuerTyp.name} onChange={(e) => setNeuerTyp({ ...neuerTyp, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addTyp()} />

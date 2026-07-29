@@ -104,6 +104,7 @@ a { color: var(--color-accent); text-underline-offset: 3px; }
   white-space: nowrap;
 }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.hidden { display: none; } /* unlayered .btn would otherwise override Tailwind's `hidden` */
 .btn-primary { color: var(--color-accent); border-color: var(--color-accent); }
 .btn-primary:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
 .btn-primary:active { background: color-mix(in srgb, var(--color-accent) 22%, transparent); }
