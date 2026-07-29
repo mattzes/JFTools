@@ -44,7 +44,7 @@ export default function AbzeichenPage() {
   const { data: personen, reload } = useApi<Person[]>("/personen");
   const [selId, setSelId] = useState<number | null>(null);
   const [suche, setSuche] = useState("");
-  const { sort, toggle } = useSort();
+  const { sort, toggle } = useSort({ key: "name", dir: "asc" });
 
   if (!personen) return <Spinner />;
 
@@ -53,7 +53,7 @@ export default function AbzeichenPage() {
     .filter((p) => p.aktiv && p.rolle === "jugendlich")
     .sort((a, b) => personName(a).localeCompare(personName(b), "de"));
   const jugend = sortRows(jugendBasis, sort, (p, key) => {
-    if (key === "name") return `${p.nachname} ${p.vorname}`;
+    if (key === "name") return personName(p);
     const b = BADGES.find((x) => x.id === key);
     if (!b) return null;
     const datum = p[b.dateKey];

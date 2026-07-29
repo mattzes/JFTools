@@ -52,7 +52,7 @@ export default function TrainingPage() {
     () =>
       (personen ?? [])
         .filter((p) => p.aktiv && p.rolle === "jugendlich")
-        .sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`)),
+        .sort((a, b) => personName(a).localeCompare(personName(b), "de")),
     [personen],
   );
 
@@ -214,7 +214,7 @@ function ZeitTabelle({
   const sorted = sortRows(rows, sort, (r, key) => {
     switch (key) {
       case "rang": return rankByPerson.get(r.p.id);
-      case "person": return `${r.p.nachname} ${r.p.vorname}`;
+      case "person": return personName(r.p);
       case "best": return r.agg?.best ?? null;
       case "schnitt": return r.agg?.avg ?? null;
       case "letzte": return r.agg?.last ?? null;
@@ -312,7 +312,7 @@ function KnotenTabelle({
   const knoten = kat.disziplinen ?? [];
   const { sort, toggle } = useSort();
   const rows = sortRows([...personen], sort, (p, key) =>
-    key === "person" ? `${p.nachname} ${p.vorname}` : null,
+    key === "person" ? personName(p) : null,
   );
   // Mobile: Kacheln sind standardmäßig eingeklappt (Oneliner-Übersicht), Caret klappt aus.
   const [offeneKarten, setOffeneKarten] = useState<Set<number>>(new Set());
@@ -431,7 +431,7 @@ function StatischTabelle({
   eintragByPerson: Map<number, TrainingEintrag>;
   onSetWert: (personId: number, wert: string | null) => void;
 }) {
-  const { sort, toggle } = useSort();
+  const { sort, toggle } = useSort({ key: "person", dir: "asc" });
   const options: { value: string; label: string }[] =
     kat.kind === "wassergraben"
       ? WASSERGRABEN_WERTE.map((w) => ({ value: w, label: WASSERGRABEN_LABELS[w] }))
@@ -441,7 +441,7 @@ function StatischTabelle({
   const wertRang = new Map(options.map((o, i) => [o.value, i + 1]));
   const rows = sortRows([...personen], sort, (p, key) => {
     switch (key) {
-      case "person": return `${p.nachname} ${p.vorname}`;
+      case "person": return personName(p);
       case "wert": {
         const w = eintragByPerson.get(p.id)?.wert;
         return w != null ? wertRang.get(w) ?? 0 : 0;
@@ -508,11 +508,11 @@ function LeinbeutelTabelle({
   disziplinId: number | undefined;
   onOpen: (personId: number) => void;
 }) {
-  const { sort, toggle } = useSort();
+  const { sort, toggle } = useSort({ key: "person", dir: "asc" });
   const rows = personen.map((p) => ({ p, stats: leinbeutelStats(messungen, p.id, disziplinId), note: eintragByPerson.get(p.id)?.notiz ?? null }));
   const sorted = sortRows(rows, sort, (r, key) => {
     switch (key) {
-      case "person": return `${r.p.nachname} ${r.p.vorname}`;
+      case "person": return personName(r.p);
       case "wuerfe": return r.stats.total || null;
       case "treffer": return r.stats.treffer || null;
       case "zukurz": return r.stats.zuKurz || null;

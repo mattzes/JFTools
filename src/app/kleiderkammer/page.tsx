@@ -107,7 +107,7 @@ export default function KleiderkammerPage() {
       const q = suche.trim().toLowerCase();
       return !q || personName(p).toLowerCase().includes(q);
     })
-    .sort((a, b) => a.nachname.localeCompare(b.nachname, "de"));
+    .sort((a, b) => personName(a).localeCompare(personName(b), "de"));
 
   const selPerson = personen.find((p) => p.id === selPersonId) ?? null;
   const personAusgaben = selPerson ? ausgaben.filter((a) => a.personId === selPerson.id) : [];

@@ -237,7 +237,7 @@ export default function TerminePage() {
               <div className="dialog-scroll-body" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {zielFuer(form.zielgruppe)
                   .slice()
-                  .sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`))
+                  .sort((a, b) => personName(a).localeCompare(personName(b), "de"))
                   .map((p) => {
                     const cur = cellMap.get(`${p.id}:${form.id}`) ?? "offen";
                     return (
@@ -302,9 +302,9 @@ function MatrixView({
   onCycle: (personId: number, terminId: number) => void;
   editMode: boolean;
 }) {
-  const { sort, toggle } = useSort();
+  const { sort, toggle } = useSort({ key: "name", dir: "asc" });
   const persons = sortRows(aktive, sort, (p, key) => {
-    if (key === "name") return `${p.nachname} ${p.vorname}`;
+    if (key === "name") return personName(p);
     if (key.startsWith("t:")) {
       const tid = Number(key.slice(2));
       const t = termine.find((x) => x.id === tid);

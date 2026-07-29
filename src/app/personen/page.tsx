@@ -36,7 +36,7 @@ const jahrOf = (iso: string | null) => (iso ? Number(iso.slice(0, 4)) : null);
 // Sortier-Werte je Spalte (Abzeichen: Abnahme-Jahr bzw. Vorschlagsjahr)
 function personSortVal(p: Person, key: string) {
   switch (key) {
-    case "name": return `${p.nachname} ${p.vorname}`;
+    case "name": return personName(p);
     case "geb": return p.geburtsdatum;
     case "ein": return p.eintrittsdatum;
     case "ausweis": return p.ausweisnr;
@@ -65,7 +65,9 @@ export default function PersonenPage() {
     const gefiltert = personen
       .filter((p) => (zeigeInaktive ? true : p.aktiv))
       .filter((p) => !q || personName(p).toLowerCase().includes(q) || (p.ausweisnr ?? "").includes(q))
-      .sort((a, b) => (a.rolle === b.rolle ? a.nachname.localeCompare(b.nachname) : a.rolle === "jugendlich" ? -1 : 1));
+      .sort((a, b) =>
+        a.rolle === b.rolle ? personName(a).localeCompare(personName(b), "de") : a.rolle === "jugendlich" ? -1 : 1,
+      );
     return sortRows(gefiltert, sort, personSortVal);
   }, [personen, suche, zeigeInaktive, sort]);
 

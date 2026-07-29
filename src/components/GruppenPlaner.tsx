@@ -82,11 +82,11 @@ export function GruppenPlaner({
   // Starterliste = Jugendliche mit Zusage. Betreuer werden getrennt geführt und
   // nur im „nur_gruppen"-Modus (Zeltlager) berücksichtigt.
   const starter = useMemo(
-    () => personen.filter((p) => p.aktiv && p.rolle === "jugendlich" && verfByPerson.get(p.id) === "ja").sort((a, b) => a.nachname.localeCompare(b.nachname)),
+    () => personen.filter((p) => p.aktiv && p.rolle === "jugendlich" && verfByPerson.get(p.id) === "ja").sort((a, b) => personName(a).localeCompare(personName(b), "de")),
     [personen, verfByPerson],
   );
   const betreuerStarter = useMemo(
-    () => personen.filter((p) => p.aktiv && p.rolle === "betreuer" && verfByPerson.get(p.id) === "ja").sort((a, b) => a.nachname.localeCompare(b.nachname)),
+    () => personen.filter((p) => p.aktiv && p.rolle === "betreuer" && verfByPerson.get(p.id) === "ja").sort((a, b) => personName(a).localeCompare(personName(b), "de")),
     [personen, verfByPerson],
   );
   // Doppelstarter: in mehr als einer Gruppe dieses Wettbewerbs
@@ -426,9 +426,9 @@ function StarterTable({
   gruppenCountByPerson: Map<number, number>;
   istZugewiesen: (id: number) => boolean;
 }) {
-  const { sort, toggle } = useSort();
+  const { sort, toggle } = useSort({ key: "name", dir: "asc" });
   const rows = sortRows(starter, sort, (p, key) => {
-    if (key === "name") return `${p.nachname} ${p.vorname}`;
+    if (key === "name") return personName(p);
     if (key === "alter") return p.geburtsdatum ? alter(p.geburtsdatum) : null;
     if (key === "jg") return p.geburtsdatum ? alterInDiesemJahr(p.geburtsdatum) : null;
     if (key.startsWith("t:")) return VERF_RANK[verfByPT.get(`${p.id}:${Number(key.slice(2))}`) ?? "offen"];

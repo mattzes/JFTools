@@ -42,7 +42,7 @@ export default function RueckmeldungenPage() {
   const [neuerTyp, setNeuerTyp] = useState<{ name: string; zielgruppe: Zielgruppe } | null>(null);
   const [mobilDok, setMobilDok] = useState<Dokumententyp | null>(null);
   const [editMode, setEditMode] = useState(false);
-  const { sort, toggle: onSort } = useSort();
+  const { sort, toggle: onSort } = useSort({ key: "name", dir: "asc" });
   const confirm = useConfirm();
 
   const map = useMemo(() => {
@@ -55,7 +55,7 @@ export default function RueckmeldungenPage() {
 
   const aktive = personen.filter((p) => p.aktiv);
   const aktiveSortiert = sortRows(aktive, sort, (p, key) => {
-    if (key === "name") return `${p.nachname} ${p.vorname}`;
+    if (key === "name") return personName(p);
     if (key.startsWith("d:")) {
       const did = Number(key.slice(2));
       const d = doks.find((x) => x.id === did);
@@ -281,7 +281,7 @@ export default function RueckmeldungenPage() {
             {aktive
               .filter((p) => inZielgruppe(p, mobilDok.zielgruppe))
               .slice()
-              .sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`))
+              .sort((a, b) => personName(a).localeCompare(personName(b), "de"))
               .map((p) => {
                 const ok = map.get(`${p.id}:${mobilDok.id}`)?.erhalten ?? false;
                 return (
