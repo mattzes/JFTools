@@ -13,7 +13,7 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { api, Person, Planung, Gruppe, Gruppenmitglied, Termin, Verfuegbarkeit, personName } from "@/lib/api";
-import { ModeTag, PageHeader, SortArrow, Th, fmtDateShort, useSort, sortRows } from "@/components/ui";
+import { Dialog, ModeTag, PageHeader, SortArrow, Th, fmtDateShort, useSort, sortRows } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { A_TEIL_POSITIONEN, KNOTEN_POSITIONEN, KNOTEN, B_TEIL_AUFGABEN } from "@/lib/domain/constants";
 import { gruppenAlter, sollZeitLabel, gruppenWarnungen } from "@/lib/domain/planung";
@@ -56,6 +56,9 @@ export function GruppenPlaner({
   const [pendingAssigned, setPendingAssigned] = useState<Set<number>>(new Set());
   const markPending = (id: number) => setPendingAssigned((prev) => new Set(prev).add(id));
   const [info, setInfo] = useState<StarterInfo>({ alter: false, jgAlter: false, termine: [] });
+  // Mobile: Position (A-Teil) bzw. Gruppe (nur_gruppen) antippen → Starter aus Dialog
+  // auswählen statt Drag & Drop. position === null ⇒ ohne feste Position zur Gruppe.
+  const [auswahl, setAuswahl] = useState<{ gruppeId: number; position: string | null } | null>(null);
 
   // Andere Termine (nicht der aktuelle) für die Anwesenheits-Auswahl
   const andereTermine = useMemo(
@@ -221,6 +224,32 @@ export function GruppenPlaner({
     }
   }
 
+  // Mobile-Auswahl: Starter aus dem Pool zuteilen – mit fester Position (A-Teil)
+  // oder ohne (position === null, nur_gruppen). Entspricht dem Pool-Drop aus onDragEnd.
+  async function zuteilenAusPool(personId: number, gruppeId: number, position: string | null) {
+    if (position) {
+      const besetzt = planung.mitglieder.some((m) => m.gruppeId === gruppeId && m.aTeilPosition === position && m.personId !== personId);
+      if (besetzt) return;
+    }
+    const existing = planung.mitglieder.find((m) => m.gruppeId === gruppeId && m.personId === personId);
+    if (existing) {
+      if (position) await api(`/gruppenmitglieder/${existing.id}`, { method: "PATCH", body: JSON.stringify({ aTeilPosition: position }) });
+    } else if (!doppelstart) {
+      // Ohne Doppelstart: woanders zugeteilt → verschieben, sonst neu zuweisen
+      markPending(personId);
+      const andere = planung.mitglieder.find((m) => m.personId === personId);
+      if (andere) {
+        await api(`/gruppenmitglieder/${andere.id}`, { method: "PATCH", body: JSON.stringify({ gruppeId, aTeilPosition: position ?? andere.aTeilPosition }) });
+      } else {
+        await api("/gruppenmitglieder", { method: "POST", body: JSON.stringify({ gruppeId, personId, aTeilPosition: position }) });
+      }
+    } else {
+      markPending(personId);
+      await api("/gruppenmitglieder", { method: "POST", body: JSON.stringify({ gruppeId, personId, aTeilPosition: position }) });
+    }
+    reload();
+  }
+
   const activeP = activePerson ? personById.get(activePerson.personId) : null;
 
   return (
@@ -230,7 +259,10 @@ export function GruppenPlaner({
         sub={`${starter.length} Starter${istNurGruppen ? ` · ${betreuerStarter.length} Betreuer` : ""} · ${planung.gruppen.length} ${planung.gruppen.length === 1 ? "Gruppe" : "Gruppen"}`}
       >
         <ModeTag modus={modus} />
-        <AnzeigeMenu info={info} setInfo={setInfo} termine={andereTermine} />
+        {/* Unter 768px (Starterliste ausgeblendet) wandert „Anzeige" in den Auswahl-Dialog */}
+        <div className="hidden md:block">
+          <AnzeigeMenu info={info} setInfo={setInfo} termine={andereTermine} />
+        </div>
         <button
           className="btn btn-secondary"
           onClick={toggleDoppelstart}
@@ -297,6 +329,7 @@ export function GruppenPlaner({
                     modus={modus}
                     istATeil={istATeil}
                     istBTeil={istBTeil}
+                    onAdd={(position) => setAuswahl({ gruppeId: g.id, position })}
                     onDelete={() => deleteGruppe(g.id)}
                     onRemoveMember={async (mid) => {
                       const mm = planung.mitglieder.find((x) => x.id === mid);
@@ -324,7 +357,105 @@ export function GruppenPlaner({
           )}
         </DragOverlay>
       </DndContext>
+
+      {auswahl && (
+        <PositionAuswahlDialog
+          gruppeName={planung.gruppen.find((g) => g.id === auswahl.gruppeId)?.name ?? ""}
+          position={auswahl.position}
+          pool={auswahl.position === null ? [...pool, ...betreuerPool] : pool}
+          gruppenCountByPerson={gruppenCountByPerson}
+          info={info}
+          setInfo={setInfo}
+          andereTermine={andereTermine}
+          infoTermine={infoTermine}
+          verfByPT={verfByPT}
+          onClose={() => setAuswahl(null)}
+          onPick={async (personId) => {
+            await zuteilenAusPool(personId, auswahl.gruppeId, auswahl.position);
+            setAuswahl(null);
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function PositionAuswahlDialog({
+  gruppeName,
+  position,
+  pool,
+  gruppenCountByPerson,
+  info,
+  setInfo,
+  andereTermine,
+  infoTermine,
+  verfByPT,
+  onClose,
+  onPick,
+}: {
+  gruppeName: string;
+  position: string | null;
+  pool: Person[];
+  gruppenCountByPerson: Map<number, number>;
+  info: StarterInfo;
+  setInfo: (i: StarterInfo) => void;
+  andereTermine: Termin[];
+  infoTermine: Termin[];
+  verfByPT: Map<string, Verfuegbarkeit["status"]>;
+  onClose: () => void;
+  onPick: (personId: number) => void;
+}) {
+  return (
+    <Dialog title={position ? `Position ${position} · ${gruppeName}` : `${gruppeName} · Person hinzufügen`} onClose={onClose} fullscreenMobile>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <AnzeigeMenu info={info} setInfo={setInfo} termine={andereTermine} />
+      </div>
+      <div className="dialog-scroll-body" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {pool.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: "var(--color-neutral-500)", padding: "8px 2px", lineHeight: 1.5 }}>
+            Keine verfügbaren Starter. In <b>Termine</b> Verfügbarkeit auf „Ja" setzen.
+          </div>
+        ) : (
+          pool.map((p) => {
+            const zugeteilt = (gruppenCountByPerson.get(p.id) ?? 0) >= 1;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onPick(p.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
+                  padding: "10px 12px", borderRadius: 10, cursor: "pointer",
+                  background: "var(--color-bg)", border: "1px solid var(--color-divider)",
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{personName(p)}</span>
+                {info.alter && (
+                  <span style={{ fontSize: 11, color: "var(--color-neutral-500)", flex: "none", fontVariantNumeric: "tabular-nums" }} title="Alter">
+                    {p.geburtsdatum ? `${alter(p.geburtsdatum)} J.` : "—"}
+                  </span>
+                )}
+                {info.jgAlter && (
+                  <span style={{ fontSize: 11, color: "var(--color-neutral-500)", flex: "none", fontVariantNumeric: "tabular-nums" }} title="Jahrgangsalter">
+                    Jg {p.geburtsdatum ? alterInDiesemJahr(p.geburtsdatum) : "—"}
+                  </span>
+                )}
+                {infoTermine.map((t) => {
+                  const st = verfByPT.get(`${p.id}:${t.id}`) ?? "offen";
+                  const s = VERF_STYLE[st];
+                  return <i key={t.id} className={`ph-bold ${s.icon}`} title={`${t.titel}: ${st}`} style={{ color: s.c, fontSize: 14, flex: "none" }} />;
+                })}
+                {zugeteilt && <span style={{ fontSize: 10, fontWeight: 600, color: "var(--color-neutral-500)", flex: "none" }}>bereits zugeteilt</span>}
+                <i className="ph ph-plus" style={{ fontSize: 15, color: "var(--color-accent-300)", flex: "none" }} />
+              </button>
+            );
+          })
+        )}
+      </div>
+      <div className="dialog-actions">
+        <button className="btn btn-secondary" onClick={onClose}>Abbrechen</button>
+      </div>
+    </Dialog>
   );
 }
 
@@ -637,6 +768,7 @@ function GruppeCard({
   modus,
   istATeil,
   istBTeil,
+  onAdd,
   onDelete,
   onRemoveMember,
   onSetLaeufer,
@@ -651,6 +783,7 @@ function GruppeCard({
   modus: string;
   istATeil: boolean;
   istBTeil: boolean;
+  onAdd: (position: string | null) => void;
   onDelete: () => void;
   onRemoveMember: (id: number) => void;
   onSetLaeufer: (id: number, l: number | null) => void;
@@ -676,7 +809,11 @@ function GruppeCard({
   const doppelteKnoten = new Set([...knotenCount].filter(([, n]) => n > 1).map(([k]) => k));
 
   return (
-    <div ref={setNodeRef} className="panel" style={{ border: `1px solid ${isOver ? "var(--color-accent)" : "var(--color-accent-800)"}`, ...(istATeil ? {} : { width: 280, flex: "none" }) }}>
+    <div
+      ref={setNodeRef}
+      className={`panel${istATeil ? "" : " w-full md:w-[280px] md:flex-none"}`}
+      style={{ border: `1px solid ${isOver ? "var(--color-accent)" : "var(--color-accent-800)"}` }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 15px" }}>
         <i className="ph ph-users-three" style={{ color: "var(--color-accent-300)" }} />
         <h4 style={{ margin: 0, fontSize: 15 }}>{gruppe.name}</h4>
@@ -708,7 +845,23 @@ function GruppeCard({
                   {p ? (
                     <MemberChip m={m!} p={p} from={gruppe.id} doppel={(gruppenCountByPerson.get(p.id) ?? 0) >= 2} onRemove={() => onRemoveMember(m!.id)} />
                   ) : (
-                    <span style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>frei — hierher ziehen</span>
+                    <>
+                      <span className="hidden md:inline" style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>frei — hierher ziehen</span>
+                      <button
+                        type="button"
+                        className="inline-flex md:hidden"
+                        onClick={() => onAdd(pos)}
+                        style={{
+                          alignItems: "center", gap: 6, minWidth: 0,
+                          padding: "6px 9px", borderRadius: 7, cursor: "pointer",
+                          background: "transparent", border: "1px dashed var(--color-divider)",
+                          color: "var(--color-accent-200)", fontSize: 11.5, fontWeight: 500,
+                        }}
+                      >
+                        <i className="ph ph-plus" style={{ fontSize: 13, flex: "none" }} />
+                        frei — hier auswählen
+                      </button>
+                    </>
                   )}
                 </div>
                 <div>
@@ -748,7 +901,7 @@ function GruppeCard({
       ) : (
         // nur_gruppen: Jugendliche als Liste, Betreuer als separate Liste darunter
         <div style={{ padding: "10px 15px 13px", borderTop: "1px solid var(--color-divider)", display: "flex", flexDirection: "column", gap: 6, minHeight: 52 }}>
-          {mitglieder.length === 0 && <span style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>Personen aus der Starterliste hierher ziehen</span>}
+          {mitglieder.length === 0 && <span className="hidden md:inline" style={{ fontSize: 11.5, color: "var(--color-neutral-600)" }}>Personen aus der Starterliste hierher ziehen</span>}
           {jugendMitglieder.map((m, i) => {
             const p = personById.get(m.personId);
             return p ? (
@@ -784,6 +937,21 @@ function GruppeCard({
               })}
             </>
           )}
+          {/* Mobil: statt Drag & Drop einmal pro Gruppe der Auswahl-Dialog */}
+          <button
+            type="button"
+            className="inline-flex md:hidden"
+            onClick={() => onAdd(null)}
+            style={{
+              alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2,
+              padding: "8px 10px", borderRadius: 8, cursor: "pointer",
+              background: "transparent", border: "1px dashed var(--color-divider)",
+              color: "var(--color-accent-200)", fontSize: 12, fontWeight: 500,
+            }}
+          >
+            <i className="ph ph-plus" style={{ fontSize: 14, flex: "none" }} />
+            Person hinzufügen
+          </button>
         </div>
       )}
 
