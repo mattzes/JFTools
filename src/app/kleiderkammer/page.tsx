@@ -944,11 +944,11 @@ function AusgabeAnsicht({
                           title={swap ? "In andere Größe tauschen" : "Keine andere Größe verfügbar"}
                           onClick={() => onTauschen(z.ausgaben)}
                           disabled={!swap}
-                          style={swap ? { flex: "none" } : { flex: "none", opacity: 0.4, cursor: "not-allowed" }}
+                          style={swap ? { flex: "none", padding: 10, fontSize: 18 } : { flex: "none", padding: 10, fontSize: 18, opacity: 0.4, cursor: "not-allowed" }}
                         >
                           <i className="ph ph-arrows-left-right" />
                         </button>
-                        <button className="btn btn-ghost" aria-label="Zurücknehmen" title="Zurücknehmen" onClick={() => onRueckgabe(z.ausgaben)} style={{ flex: "none" }}>
+                        <button className="btn btn-ghost" aria-label="Zurücknehmen" title="Zurücknehmen" onClick={() => onRueckgabe(z.ausgaben)} style={{ flex: "none", padding: 10, fontSize: 18 }}>
                           <i className="ph ph-arrow-u-up-left" />
                         </button>
                       </div>
