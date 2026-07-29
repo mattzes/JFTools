@@ -43,8 +43,8 @@ export default function UebersichtPage() {
   }
 
   const kpis = [
-    { n: aktive.length, label: "Aktive Personen", icon: "ph-users-three", iconBg: "var(--color-accent-900)", iconFg: "var(--color-accent-200)", delta: `${jugend.length} J · ${betreuer.length} B` },
-    { n: offeneVerf, label: "Fehlende Terminrückmeldungen", icon: "ph-question", iconBg: "rgba(240,178,58,.16)", iconFg: "var(--warn)", delta: `${termine.filter((t) => (t.datumBis ?? t.datumVon) >= heute).length} Termine` },
+    { n: aktive.length, label: "Aktive Personen", href: "/personen", icon: "ph-users-three", iconBg: "var(--color-accent-900)", iconFg: "var(--color-accent-200)", delta: `${jugend.length} J · ${betreuer.length} B` },
+    { n: offeneVerf, label: "Fehlende Terminrückmeldungen", href: "/termine", icon: "ph-question", iconBg: "rgba(240,178,58,.16)", iconFg: "var(--warn)", delta: `${termine.filter((t) => (t.datumBis ?? t.datumVon) >= heute).length} Termine` },
   ];
 
   const heuteFmt = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -57,7 +57,7 @@ export default function UebersichtPage() {
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3" style={{ marginBottom: 16 }}>
           {kpis.map((k) => (
-            <div className="kpi" key={k.label}>
+            <Link className="kpi" key={k.label} href={k.href} style={{ textDecoration: "none", color: "inherit" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ width: 30, height: 30, borderRadius: 8, display: "grid", placeItems: "center", fontSize: 16, background: k.iconBg, color: k.iconFg }}>
                   <i className={`ph ${k.icon}`} />
@@ -66,7 +66,7 @@ export default function UebersichtPage() {
               </div>
               <div className="kpi-n">{k.n}</div>
               <div className="kpi-l">{k.label}</div>
-            </div>
+            </Link>
           ))}
         </div>
 
@@ -86,7 +86,7 @@ export default function UebersichtPage() {
               const pct = ziel.length ? Math.round((zusagen / ziel.length) * 100) : 0;
               const d = fmtDateShort(t.datumVon);
               return (
-                <Link key={t.id} href="/termine" className="mrow" style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={t.id} href={`/termine?t=${t.id}`} className="mrow" style={{ textDecoration: "none", color: "inherit" }}>
                   <div style={{ width: 38, flex: "none", textAlign: "center", lineHeight: 1.05 }}>
                     <div style={{ font: "600 17px/1 var(--font-heading)" }}>{d.tag}</div>
                     <div style={{ fontSize: 10, color: "var(--color-neutral-500)", textTransform: "uppercase" }}>{d.mon}</div>
@@ -113,7 +113,7 @@ export default function UebersichtPage() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* Offene Rückmeldungen */}
-            <div className="panel">
+            <Link href="/checkliste" className="panel" style={{ textDecoration: "none", color: "inherit" }}>
               <div className="panel-h">
                 <i className="ph ph-clipboard-text" style={{ color: "var(--warn)" }} />
                 <h4>Offene Checkliste</h4>
@@ -124,14 +124,14 @@ export default function UebersichtPage() {
                 </div>
               )}
               {fehltJe.map((r) => (
-                <Link key={r.name} href="/rueckmeldungen" className="mrow" style={{ textDecoration: "none", color: "inherit" }}>
+                <div key={r.name} className="mrow">
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 500 }}>{r.name}</div>
                   </div>
                   <span style={{ fontSize: 12, fontWeight: 600, color: "var(--warn)" }}>{r.offen} offen</span>
-                </Link>
+                </div>
               ))}
-            </div>
+            </Link>
 
           </div>
         </div>

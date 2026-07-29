@@ -7,7 +7,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { ExportDialog } from "@/components/ExportDialog";
 
 const LINKS = [
-  { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Checkliste", sub: "Zettel & Einverständnis" },
+  { href: "/checkliste", icon: "ph-clipboard-text", label: "Checkliste", sub: "Zettel & Einverständnis" },
   { href: "/abzeichen", icon: "ph-medal", label: "Abzeichen", sub: "Fälligkeit nach Jahr" },
   { href: "/training", icon: "ph-timer", label: "Training", sub: "Zeiten & Auswertung" },
   { href: "/kleiderkammer", icon: "ph-t-shirt", label: "Kleiderkammer", sub: "Bestand & Ausgabe" },

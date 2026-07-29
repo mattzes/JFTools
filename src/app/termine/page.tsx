@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, useApi, Person, Termin, Verfuegbarkeit, personName } from "@/lib/api";
 import { DatePicker, Dialog, Empty, ModeTag, PageHeader, Spinner, SortArrow, Th, fmtDate, fmtDateShort, useSort, sortRows } from "@/components/ui";
 import { PLANUNGSMODI, ZIELGRUPPEN, Planungsmodus, Zielgruppe } from "@/lib/domain/constants";
@@ -52,6 +52,18 @@ export default function TerminePage() {
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<TerminForm | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [deepLinkDone, setDeepLinkDone] = useState(false);
+
+  // Deep-Link: /termine?t=<id> öffnet direkt den Termin-Dialog
+  useEffect(() => {
+    if (deepLinkDone || !termine) return;
+    setDeepLinkDone(true);
+    const id = Number(new URLSearchParams(window.location.search).get("t"));
+    const t = id ? termine.find((x) => x.id === id) : null;
+    if (t) {
+      setForm({ id: t.id, titel: t.titel, datumVon: t.datumVon, datumBis: t.datumBis ?? "", planungsmodus: t.planungsmodus, zielgruppe: t.zielgruppe, ort: t.ort ?? "" });
+    }
+  }, [termine, deepLinkDone]);
 
   const cellMap = useMemo(() => {
     const m = new Map<string, Verfuegbarkeit["status"]>();
@@ -84,6 +96,15 @@ export default function TerminePage() {
     setCell(personId, terminId, next);
   }
 
+  function closeForm() {
+    setForm(null);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("t")) {
+      url.searchParams.delete("t");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+  }
+
   async function save() {
     if (!form) return;
     setFehler(null);
@@ -98,7 +119,7 @@ export default function TerminePage() {
     try {
       if (form.id) await api(`/termine/${form.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       else await api("/termine", { method: "POST", body: JSON.stringify(payload) });
-      setForm(null);
+      closeForm();
       reload();
     } catch (e) {
       setFehler(e instanceof Error ? e.message : String(e));
@@ -171,7 +192,7 @@ export default function TerminePage() {
       )}
 
       {form && (
-        <Dialog title={form.id ? "Termin bearbeiten" : "Neuer Termin"} onClose={() => setForm(null)} fullscreenMobile>
+        <Dialog title={form.id ? "Termin bearbeiten" : "Neuer Termin"} onClose={closeForm} fullscreenMobile>
           <div className="field">
             <label>Titel *</label>
             <input className="input" value={form.titel} onChange={(e) => setForm({ ...form, titel: e.target.value })} />
@@ -244,7 +265,7 @@ export default function TerminePage() {
                 onClick={async () => {
                   if (await confirm({ title: "Termin löschen", message: "Diesen Termin wirklich löschen? Verfügbarkeiten und Planung gehen verloren.", confirmLabel: "Löschen" })) {
                     await api(`/termine/${form.id}`, { method: "DELETE" });
-                    setForm(null);
+                    closeForm();
                     reload();
                     reloadVerf();
                   }
@@ -254,7 +275,7 @@ export default function TerminePage() {
                 Löschen
               </button>
             )}
-            <button className="btn btn-secondary" onClick={() => setForm(null)}>Abbrechen</button>
+            <button className="btn btn-secondary" onClick={closeForm}>Abbrechen</button>
             <button className="btn btn-primary" onClick={save} disabled={!form.titel.trim() || !form.datumVon}>
               <i className="ph ph-check" />
               Speichern

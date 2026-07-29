@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { href: "/", icon: "ph-house", label: "Übersicht", key: "dashboard" },
   { href: "/personen", icon: "ph-users-three", label: "Personen", key: "personen" },
   { href: "/termine", icon: "ph-calendar-dots", label: "Termine", key: "termine" },
-  { href: "/rueckmeldungen", icon: "ph-clipboard-text", label: "Checkliste", key: "rueck" },
+  { href: "/checkliste", icon: "ph-clipboard-text", label: "Checkliste", key: "rueck" },
   { href: "/abzeichen", icon: "ph-medal", label: "Abzeichen", key: "abzeichen" },
   { href: "/wettbewerbe", icon: "ph-trophy", label: "Wettbewerbe", key: "wettbewerb" },
   { href: "/training", icon: "ph-timer", label: "Training", key: "training" },
@@ -23,7 +23,7 @@ const TAB_ITEMS = [
   { href: "/personen", icon: "ph-users-three", label: "Personen", match: ["/personen"] },
   { href: "/termine", icon: "ph-calendar-dots", label: "Termine", match: ["/termine"] },
   { href: "/wettbewerbe", icon: "ph-trophy", label: "Planer", match: ["/wettbewerbe"] },
-  { href: "/mehr", icon: "ph-dots-three-outline", label: "Mehr", match: ["/mehr", "/rueckmeldungen", "/abzeichen", "/training", "/kleiderkammer"] },
+  { href: "/mehr", icon: "ph-dots-three-outline", label: "Mehr", match: ["/mehr", "/checkliste", "/abzeichen", "/training", "/kleiderkammer"] },
 ];
 
 function isActive(pathname: string, href: string) {
