@@ -243,6 +243,17 @@ select.input { appearance: auto; }
     background: var(--color-surface);
     border-top: 1px solid var(--color-divider);
   }
+  /* Dialoge mit einem .dialog-scroll-body scrollen nicht als Ganzes –
+     nur dieser Bereich scrollt, der Rest bleibt fix (z. B. Termin-Dialog). */
+  .dialog.full:has(.dialog-scroll-body) { overflow: hidden; }
+  .dialog.full .dialog-scroll-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin: 0 -18px;
+    padding: 12px 18px 0;
+    border-top: 1px solid var(--color-divider);
+  }
 }
 
 /* ── datepicker (eigenes Design, kein natives Control) ── */

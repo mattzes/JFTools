@@ -210,9 +210,11 @@ export default function TerminePage() {
             </div>
           </div>
           {form.id && (
-            <div className="field lg:hidden">
-              <label>Anwesenheiten</label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <>
+              <div className="field lg:hidden" style={{ marginBottom: 0 }}>
+                <label style={{ marginBottom: 0 }}>Anwesenheiten</label>
+              </div>
+              <div className="dialog-scroll-body lg:hidden" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {zielFuer(form.zielgruppe)
                   .slice()
                   .sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`))
@@ -232,7 +234,7 @@ export default function TerminePage() {
                     );
                   })}
               </div>
-            </div>
+            </>
           )}
           {fehler && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{fehler}</div>}
           <div className="dialog-actions">
