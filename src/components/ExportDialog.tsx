@@ -51,7 +51,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog title="Excel-Export" onClose={onClose}>
+    <Dialog title="Excel-Export" onClose={onClose} fullscreenMobile>
       <div style={{ fontSize: 13, color: "var(--color-neutral-400)", lineHeight: 1.5, marginBottom: 4 }}>
         Mitgliederliste als Excel-Datei (.xlsx). Wähle Rolle, Spalten und optional die Anwesenheit bei Terminen.
       </div>
