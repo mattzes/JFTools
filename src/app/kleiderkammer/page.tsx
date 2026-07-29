@@ -38,7 +38,6 @@ type AusgabeForm = {
   groesse: string | null;
   menge: string;
   ausgegebenAm: string;
-  notiz: string;
 };
 
 function heute() {
@@ -59,8 +58,8 @@ export default function KleiderkammerPage() {
   const [selPersonId, setSelPersonId] = useState<number | null>(null);
   const [suche, setSuche] = useState("");
   const [ausgabeForm, setAusgabeForm] = useState<AusgabeForm | null>(null);
-  const [tauschForm, setTauschForm] = useState<{ ausgabe: KleidungAusgabe; groesse: string | null } | null>(null);
-  const [rueckgabeForm, setRueckgabeForm] = useState<{ ausgabe: KleidungAusgabe; menge: string } | null>(null);
+  const [tauschForm, setTauschForm] = useState<{ ausgaben: KleidungAusgabe[]; groesse: string | null } | null>(null);
+  const [rueckgabeForm, setRueckgabeForm] = useState<{ ausgaben: KleidungAusgabe[]; menge: string } | null>(null);
 
   // ── Ableitungen ──
   const issuedByKey = useMemo(() => {
@@ -215,7 +214,6 @@ export default function KleiderkammerPage() {
         groesse: ausgabeForm.groesse,
         menge: Number(ausgabeForm.menge) || 1,
         ausgegebenAm: ausgabeForm.ausgegebenAm || null,
-        notiz: ausgabeForm.notiz.trim() || null,
       }),
     });
     setAusgabeForm(null);
@@ -224,17 +222,19 @@ export default function KleiderkammerPage() {
 
   async function speichereRueckgabe() {
     if (!rueckgabeForm) return;
-    const { ausgabe } = rueckgabeForm;
-    const menge = Math.min(Math.max(Number(rueckgabeForm.menge) || 0, 1), ausgabe.menge);
-    if (menge >= ausgabe.menge) {
-      // vollständige Rückgabe → Zeile entfernen
-      await api(`/kleidung-ausgaben/${ausgabe.id}`, { method: "DELETE" });
-    } else {
-      // Teilrückgabe → Restmenge behalten
-      await api(`/kleidung-ausgaben/${ausgabe.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ menge: ausgabe.menge - menge }),
-      });
+    const { ausgaben } = rueckgabeForm;
+    const total = ausgaben.reduce((n, a) => n + a.menge, 0);
+    let rest = Math.min(Math.max(Number(rueckgabeForm.menge) || 0, 1), total);
+    // Bei gruppierten Utensilien über mehrere Einträge zurücknehmen (neueste zuerst)
+    for (const a of [...ausgaben].reverse()) {
+      if (rest <= 0) break;
+      if (rest >= a.menge) {
+        await api(`/kleidung-ausgaben/${a.id}`, { method: "DELETE" });
+        rest -= a.menge;
+      } else {
+        await api(`/kleidung-ausgaben/${a.id}`, { method: "PATCH", body: JSON.stringify({ menge: a.menge - rest }) });
+        rest = 0;
+      }
     }
     setRueckgabeForm(null);
     reloadAusgaben();
@@ -242,19 +242,24 @@ export default function KleiderkammerPage() {
 
   async function speichereTausch() {
     if (!tauschForm || !tauschForm.groesse) return;
-    await api(`/kleidung-ausgaben/${tauschForm.ausgabe.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ groesse: tauschForm.groesse }),
-    });
+    // Gruppierte Zeile: alle betroffenen Einträge auf die neue Größe umstellen
+    for (const a of tauschForm.ausgaben) {
+      await api(`/kleidung-ausgaben/${a.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ groesse: tauschForm.groesse }),
+      });
+    }
     setTauschForm(null);
     reloadAusgaben();
   }
 
   // Für den Tausch-Dialog: andere Größen desselben Stücks mit genügend Bestand
-  const tauschStueck = tauschForm ? stueckById.get(tauschForm.ausgabe.kleidungsstueckId) : null;
-  const tauschOptionen = tauschForm
-    ? (bestandByStueck.get(tauschForm.ausgabe.kleidungsstueckId) ?? []).filter(
-        (b) => b.groesse !== tauschForm.ausgabe.groesse,
+  const tauschErste = tauschForm ? tauschForm.ausgaben[0] : null;
+  const tauschMenge = tauschForm ? tauschForm.ausgaben.reduce((n, a) => n + a.menge, 0) : 0;
+  const tauschStueck = tauschErste ? stueckById.get(tauschErste.kleidungsstueckId) : null;
+  const tauschOptionen = tauschErste
+    ? (bestandByStueck.get(tauschErste.kleidungsstueckId) ?? []).filter(
+        (b) => b.groesse !== tauschErste.groesse,
       )
     : [];
 
@@ -310,9 +315,9 @@ export default function KleiderkammerPage() {
           bestandByStueck={bestandByStueck}
           verfuegbar={verfuegbar}
           ausgabenAlle={ausgaben}
-          onAusgeben={() => setAusgabeForm({ kleidungsstueckId: null, groesse: null, menge: "1", ausgegebenAm: heute(), notiz: "" })}
-          onRueckgabe={(a) => setRueckgabeForm({ ausgabe: a, menge: String(a.menge) })}
-          onTauschen={(a) => setTauschForm({ ausgabe: a, groesse: null })}
+          onAusgeben={() => setAusgabeForm({ kleidungsstueckId: null, groesse: null, menge: "1", ausgegebenAm: heute() })}
+          onRueckgabe={(ausgaben) => setRueckgabeForm({ ausgaben, menge: String(ausgaben.reduce((n, a) => n + a.menge, 0)) })}
+          onTauschen={(ausgaben) => setTauschForm({ ausgaben, groesse: null })}
         />
       )}
 
@@ -559,10 +564,6 @@ export default function KleiderkammerPage() {
             <label>Ausgegeben am</label>
             <DatePicker value={ausgabeForm.ausgegebenAm} onChange={(v) => setAusgabeForm({ ...ausgabeForm, ausgegebenAm: v })} />
           </div>
-          <div className="field">
-            <label>Notiz (optional)</label>
-            <input className="input" value={ausgabeForm.notiz} onChange={(e) => setAusgabeForm({ ...ausgabeForm, notiz: e.target.value })} />
-          </div>
 
           <div className="dialog-actions">
             <button className="btn btn-secondary" onClick={() => setAusgabeForm(null)}>Abbrechen</button>
@@ -584,9 +585,9 @@ export default function KleiderkammerPage() {
 
       {/* Dialog: Größe tauschen */}
       {tauschForm && tauschStueck && (
-        <Dialog title={`Größe tauschen — ${tauschStueck.name}`} onClose={() => setTauschForm(null)} fullscreenMobile>
+        <Dialog title={`Größe tauschen — ${tauschStueck.name}`} onClose={() => setTauschForm(null)}>
           <div style={{ fontSize: 13, color: "var(--color-neutral-500)", marginBottom: 4 }}>
-            Aktuell: Größe {tauschForm.ausgabe.groesse ?? "—"} × {tauschForm.ausgabe.menge}
+            Aktuell: Größe {tauschErste?.groesse ?? "—"} × {tauschMenge}
           </div>
           <div className="field">
             <label>Neue Größe</label>
@@ -598,7 +599,7 @@ export default function KleiderkammerPage() {
               <option value="">— wählen —</option>
               {tauschOptionen.map((b) => {
                 const v = verfuegbar(b);
-                const reicht = v >= tauschForm.ausgabe.menge;
+                const reicht = v >= tauschMenge;
                 return (
                   <option key={b.id} value={b.groesse ?? ""} disabled={!reicht}>
                     {b.groesse} — {v} verfügbar
@@ -615,39 +616,41 @@ export default function KleiderkammerPage() {
       )}
 
       {/* Dialog: Rückgabe (mit Menge) */}
-      {rueckgabeForm && (
-        <Dialog
-          title={`Rückgabe — ${stueckById.get(rueckgabeForm.ausgabe.kleidungsstueckId)?.name ?? "Utensil"}`}
-          onClose={() => setRueckgabeForm(null)}
-        >
-          <div style={{ fontSize: 13, color: "var(--color-neutral-500)", marginBottom: 4 }}>
-            Ausgegeben: {rueckgabeForm.ausgabe.groesse ? `Größe ${rueckgabeForm.ausgabe.groesse} · ` : ""}
-            {rueckgabeForm.ausgabe.menge} Stück
-          </div>
-          <div className="field">
-            <label>Zurückzunehmende Menge (max. {rueckgabeForm.ausgabe.menge})</label>
-            <input
-              className="input"
-              type="number"
-              min={1}
-              max={rueckgabeForm.ausgabe.menge}
-              autoFocus
-              value={rueckgabeForm.menge}
-              onChange={(e) => setRueckgabeForm({ ...rueckgabeForm, menge: e.target.value })}
-            />
-          </div>
-          <div className="dialog-actions">
-            <button className="btn btn-secondary" onClick={() => setRueckgabeForm(null)}>Abbrechen</button>
-            <button
-              className="btn btn-primary"
-              onClick={speichereRueckgabe}
-              disabled={(Number(rueckgabeForm.menge) || 0) < 1 || (Number(rueckgabeForm.menge) || 0) > rueckgabeForm.ausgabe.menge}
-            >
-              Zurücknehmen
-            </button>
-          </div>
-        </Dialog>
-      )}
+      {rueckgabeForm && (() => {
+        const first = rueckgabeForm.ausgaben[0];
+        const total = rueckgabeForm.ausgaben.reduce((n, a) => n + a.menge, 0);
+        const name = stueckById.get(first.kleidungsstueckId)?.name ?? "Utensil";
+        return (
+          <Dialog title={`Rückgabe — ${name}`} onClose={() => setRueckgabeForm(null)}>
+            <div style={{ fontSize: 13, color: "var(--color-neutral-500)", marginBottom: 4 }}>
+              Ausgegeben: {first.groesse ? `Größe ${first.groesse} · ` : ""}
+              {total} Stück
+            </div>
+            <div className="field">
+              <label>Zurückzunehmende Menge (max. {total})</label>
+              <input
+                className="input"
+                type="number"
+                min={1}
+                max={total}
+                autoFocus
+                value={rueckgabeForm.menge}
+                onChange={(e) => setRueckgabeForm({ ...rueckgabeForm, menge: e.target.value })}
+              />
+            </div>
+            <div className="dialog-actions">
+              <button className="btn btn-secondary" onClick={() => setRueckgabeForm(null)}>Abbrechen</button>
+              <button
+                className="btn btn-primary"
+                onClick={speichereRueckgabe}
+                disabled={(Number(rueckgabeForm.menge) || 0) < 1 || (Number(rueckgabeForm.menge) || 0) > total}
+              >
+                Zurücknehmen
+              </button>
+            </div>
+          </Dialog>
+        );
+      })()}
     </>
   );
 }
@@ -754,27 +757,45 @@ function AusgabeAnsicht({
   verfuegbar: (b: KleidungBestand) => number;
   ausgabenAlle: KleidungAusgabe[];
   onAusgeben: () => void;
-  onRueckgabe: (a: KleidungAusgabe) => void;
-  onTauschen: (a: KleidungAusgabe) => void;
+  onRueckgabe: (ausgaben: KleidungAusgabe[]) => void;
+  onTauschen: (ausgaben: KleidungAusgabe[]) => void;
 }) {
   const anzahlProPerson = (id: number) => ausgabenAlle.filter((a) => a.personId === id).reduce((n, a) => n + a.menge, 0);
 
-  // Tausch möglich, wenn eine andere Größe desselben Stücks genug verfügbaren Bestand hat
-  const kannTauschen = (a: KleidungAusgabe) => {
-    const s = stueckById.get(a.kleidungsstueckId);
+  // Gleiche Utensilien mit gleicher Größe zu einer Zeile zusammenfassen (Menge summiert),
+  // damit die Mengenangabe stimmt. Utensilien ohne Größe gruppieren je Kleidungsstück.
+  const zeilen: { key: string; kleidungsstueckId: number; groesse: string | null; menge: number; ausgegebenAm: string | null; ausgaben: KleidungAusgabe[] }[] = [];
+  const zeileIndex = new Map<string, number>();
+  for (const a of personAusgaben) {
+    const key = `${a.kleidungsstueckId}:${a.groesse ?? ""}`;
+    const idx = zeileIndex.get(key);
+    if (idx != null) {
+      const z = zeilen[idx];
+      z.menge += a.menge;
+      z.ausgaben.push(a);
+      if ((a.ausgegebenAm ?? "") > (z.ausgegebenAm ?? "")) z.ausgegebenAm = a.ausgegebenAm;
+    } else {
+      zeileIndex.set(key, zeilen.length);
+      zeilen.push({ key, kleidungsstueckId: a.kleidungsstueckId, groesse: a.groesse, menge: a.menge, ausgegebenAm: a.ausgegebenAm, ausgaben: [a] });
+    }
+  }
+
+  // Tausch möglich, wenn eine andere Größe desselben Stücks genug verfügbaren Bestand für die Gesamtmenge hat
+  const kannTauschen = (z: (typeof zeilen)[number]) => {
+    const s = stueckById.get(z.kleidungsstueckId);
     if (!s?.mitGroessen) return false;
-    return (bestandByStueck.get(a.kleidungsstueckId) ?? []).some(
-      (b) => b.groesse !== a.groesse && verfuegbar(b) >= a.menge,
+    return (bestandByStueck.get(z.kleidungsstueckId) ?? []).some(
+      (b) => b.groesse !== z.groesse && verfuegbar(b) >= z.menge,
     );
   };
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-      {/* Personen-Liste */}
+      {/* Personen-Liste (Desktop) */}
       <div
         style={{
           width: 260, flex: "none", borderRight: "1px solid var(--color-divider)",
-          display: "flex", flexDirection: "column", minHeight: 0,
+          flexDirection: "column", minHeight: 0,
         }}
         className="hidden lg:flex"
       >
@@ -806,24 +827,52 @@ function AusgabeAnsicht({
         </div>
       </div>
 
-      {/* Detail */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
-        {/* Mobile: Personen-Auswahl als Dropdown */}
-        <div className="lg:hidden" style={{ padding: "12px 16px 4px" }}>
-          <select className="input" value={selPerson?.id ?? ""} onChange={(e) => setSelPersonId(e.target.value ? Number(e.target.value) : null)}>
-            <option value="">— Jugendliche/n wählen —</option>
-            {jugendliche.map((p) => (
-              <option key={p.id} value={p.id}>{personName(p)}</option>
-            ))}
-          </select>
+      {/* Mobile: volle Personen-Liste + Suche, solange niemand gewählt ist */}
+      {!selPerson && (
+        <div className="flex lg:hidden" style={{ flex: 1, minWidth: 0, flexDirection: "column", minHeight: 0 }}>
+          <div style={{ padding: "12px 16px 8px" }}>
+            <input className="input" placeholder="Jugendliche suchen…" value={suche} onChange={(e) => setSuche(e.target.value)} />
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 12px" }}>
+            {jugendliche.map((p) => {
+              const n = anzahlProPerson(p.id);
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelPersonId(p.id)}
+                  style={{
+                    width: "100%", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    gap: 8, padding: "11px 11px", borderRadius: 8, border: 0, cursor: "pointer", fontSize: 14,
+                    background: "transparent", color: "var(--color-text)",
+                  }}
+                >
+                  <span>{personName(p)}</span>
+                  {n > 0 && (
+                    <span className="ph-tag" style={{ background: "var(--color-neutral-800)", color: "var(--color-neutral-300)" }}>{n}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      )}
 
+      {/* Detail */}
+      <div
+        className={selPerson ? "flex" : "hidden lg:flex"}
+        style={{ flex: 1, minWidth: 0, flexDirection: "column", minHeight: 0 }}
+      >
         {!selPerson ? (
           <Empty icon="ph-user-list" text="Jugendliche/n wählen" hint="Links eine Person auswählen, um ausgegebene Utensilien zu sehen." />
         ) : (
           <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px 20px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <div style={{ font: "600 17px/1.1 var(--font-heading)" }}>{personName(selPerson)}</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <button className="btn btn-ghost lg:hidden" onClick={() => setSelPersonId(null)} aria-label="Zurück zur Liste" title="Zurück zur Liste">
+                  <i className="ph ph-arrow-left" /> Zurück
+                </button>
+                <div style={{ font: "600 17px/1.1 var(--font-heading)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{personName(selPerson)}</div>
+              </div>
               <button className="btn btn-secondary" onClick={onAusgeben}>
                 <i className="ph ph-plus" /> Utensil ausgeben
               </button>
@@ -832,48 +881,81 @@ function AusgabeAnsicht({
             {personAusgaben.length === 0 ? (
               <Empty icon="ph-package" text="Noch nichts ausgegeben" hint="Über „Utensil ausgeben“ Kleidung zuweisen." />
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Kleidungsstück</th>
-                    <th>Größe</th>
-                    <th style={{ textAlign: "center" }}>Menge</th>
-                    <th>Ausgegeben am</th>
-                    <th>Notiz</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {personAusgaben.map((a) => (
-                    <tr key={a.id}>
-                      <td>{stueckById.get(a.kleidungsstueckId)?.name ?? "—"}</td>
-                      <td>{a.groesse ?? "—"}</td>
-                      <td style={{ textAlign: "center" }}>{a.menge}</td>
-                      <td>{fmtDate(a.ausgegebenAm)}</td>
-                      <td style={{ color: "var(--color-neutral-500)", fontSize: 13 }}>{a.notiz ?? ""}</td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        {(() => {
-                          const swap = kannTauschen(a);
-                          return (
+              <>
+                {/* Desktop: Tabelle */}
+                <div className="hidden lg:block">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Kleidungsstück</th>
+                      <th>Größe</th>
+                      <th style={{ textAlign: "center" }}>Menge</th>
+                      <th>Ausgegeben am</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {zeilen.map((z) => {
+                      const swap = kannTauschen(z);
+                      return (
+                        <tr key={z.key}>
+                          <td>{stueckById.get(z.kleidungsstueckId)?.name ?? "—"}</td>
+                          <td>{z.groesse ?? "—"}</td>
+                          <td style={{ textAlign: "center" }}>{z.menge}</td>
+                          <td>{fmtDate(z.ausgegebenAm)}</td>
+                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                             <button
                               className="btn btn-ghost"
                               title={swap ? "In andere Größe tauschen" : "Keine andere Größe verfügbar"}
-                              onClick={() => onTauschen(a)}
+                              onClick={() => onTauschen(z.ausgaben)}
                               disabled={!swap}
                               style={swap ? undefined : { opacity: 0.4, cursor: "not-allowed" }}
                             >
                               <i className="ph ph-arrows-left-right" /> Tauschen
                             </button>
-                          );
-                        })()}
-                        <button className="btn btn-ghost" title="Zurücknehmen" onClick={() => onRueckgabe(a)}>
-                          <i className="ph ph-arrow-u-up-left" /> Rückgabe
+                            <button className="btn btn-ghost" title="Zurücknehmen" onClick={() => onRueckgabe(z.ausgaben)}>
+                              <i className="ph ph-arrow-u-up-left" /> Rückgabe
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                </div>
+
+                {/* Mobile: kompakte Karten */}
+                <div className="flex flex-col lg:hidden" style={{ gap: 8 }}>
+                  {zeilen.map((z) => {
+                    const swap = kannTauschen(z);
+                    return (
+                      <div key={z.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "var(--color-surface)", borderRadius: 11 }}>
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                          <span style={{ fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {stueckById.get(z.kleidungsstueckId)?.name ?? "—"}
+                          </span>
+                          <span style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>
+                            {[`${z.menge}×`, z.groesse != null ? `Größe ${z.groesse}` : null, fmtDate(z.ausgegebenAm)].filter(Boolean).join(" · ")}
+                          </span>
+                        </div>
+                        <button
+                          className="btn btn-ghost"
+                          aria-label="In andere Größe tauschen"
+                          title={swap ? "In andere Größe tauschen" : "Keine andere Größe verfügbar"}
+                          onClick={() => onTauschen(z.ausgaben)}
+                          disabled={!swap}
+                          style={swap ? { flex: "none" } : { flex: "none", opacity: 0.4, cursor: "not-allowed" }}
+                        >
+                          <i className="ph ph-arrows-left-right" />
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <button className="btn btn-ghost" aria-label="Zurücknehmen" title="Zurücknehmen" onClick={() => onRueckgabe(z.ausgaben)} style={{ flex: "none" }}>
+                          <i className="ph ph-arrow-u-up-left" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}

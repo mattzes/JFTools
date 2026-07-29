@@ -180,7 +180,6 @@ export const kleidungAusgabeSchema = z.object({
   groesse: z.string().nullish(),
   menge: z.number().int().min(1),
   ausgegebenAm: isoDate.nullish(),
-  notiz: z.string().nullish(),
 });
 
 export const kleidungAusgabeUpdateSchema = z.object({

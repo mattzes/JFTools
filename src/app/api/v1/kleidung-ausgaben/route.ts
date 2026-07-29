@@ -20,7 +20,6 @@ export async function POST(req: Request) {
       groesse: body.groesse?.trim() || null,
       menge: body.menge,
       ausgegebenAm: body.ausgegebenAm ?? null,
-      notiz: body.notiz ?? null,
     })
     .returning()
     .get();

@@ -150,7 +150,6 @@ CREATE TABLE IF NOT EXISTS kleidung_ausgaben (
   groesse TEXT,
   menge INTEGER NOT NULL DEFAULT 1,
   ausgegeben_am TEXT,
-  notiz TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

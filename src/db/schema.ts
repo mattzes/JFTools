@@ -217,7 +217,6 @@ export const kleidungAusgaben = sqliteTable("kleidung_ausgaben", {
   groesse: text("groesse"),
   menge: integer("menge").notNull().default(1),
   ausgegebenAm: text("ausgegeben_am"),
-  notiz: text("notiz"),
   ...timestamps,
 });
 
