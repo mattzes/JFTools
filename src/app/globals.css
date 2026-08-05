@@ -243,6 +243,43 @@ select.input { appearance: auto; }
   padding: 12px 18px 0;
   border-top: 1px solid var(--color-divider);
 }
+/* Enthält der Scroll-Bereich eine Tabelle, scrollt nicht der Wrapper, sondern
+   nur der Tabellen-Body (<tbody>). Der Header (<thead>) steht fest oben – kein
+   sticky-Offset und keine transparente Divider-Linie oberhalb des Headers. */
+.dialog .dialog-scroll-body:has(> .table) {
+  overflow: hidden;
+  padding: 0 18px;
+  display: flex;
+  min-height: 0;
+}
+.dialog .dialog-scroll-body > .table {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.dialog .dialog-scroll-body > .table thead,
+.dialog .dialog-scroll-body > .table tbody {
+  display: block;
+}
+.dialog .dialog-scroll-body > .table thead tr,
+.dialog .dialog-scroll-body > .table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+.dialog .dialog-scroll-body > .table tbody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* thead- und tbody-Zeilen sind eigenständige Tabellen (table-layout: fixed).
+   Die schmale Aktions-Spalte (letzte Spalte) muss in beiden gleich breit sein,
+   damit die restlichen Spalten identisch aufteilen und bündig fluchten. */
+.dialog .dialog-scroll-body > .table th:last-child,
+.dialog .dialog-scroll-body > .table td:last-child {
+  width: 40px;
+}
 
 @media (max-width: 63.999rem) {
   .dialog-backdrop.full { padding: 0; }
