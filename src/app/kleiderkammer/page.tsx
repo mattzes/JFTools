@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   api,
   useApi,
@@ -791,6 +791,25 @@ function AusgabeAnsicht({
     );
   };
 
+  // Zeilen nach Kleidungsstück gruppieren; Gruppen alphabetisch, Größen numerisch/alpha
+  const gruppen = (() => {
+    const map = new Map<number, typeof zeilen>();
+    for (const z of zeilen) {
+      const arr = map.get(z.kleidungsstueckId) ?? [];
+      arr.push(z);
+      map.set(z.kleidungsstueckId, arr);
+    }
+    return [...map.entries()]
+      .map(([id, zs]) => ({
+        id,
+        name: stueckById.get(id)?.name ?? "—",
+        mitGroessen: stueckById.get(id)?.mitGroessen ?? false,
+        menge: zs.reduce((n, z) => n + z.menge, 0),
+        zeilen: [...zs].sort((a, b) => (a.groesse ?? "").localeCompare(b.groesse ?? "", "de", { numeric: true })),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, "de"));
+  })();
+
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
       {/* Personen-Liste (Desktop) */}
@@ -882,12 +901,11 @@ function AusgabeAnsicht({
               <Empty icon="ph-package" text="Noch nichts ausgegeben" hint="Über „Utensil ausgeben“ Kleidung zuweisen." />
             ) : (
               <>
-                {/* Desktop: Tabelle */}
+                {/* Desktop: Tabelle, gruppiert nach Kleidungsstück */}
                 <div className="hidden lg:block">
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Kleidungsstück</th>
                       <th>Größe</th>
                       <th style={{ textAlign: "center" }}>Menge</th>
                       <th>Ausgegeben am</th>
@@ -895,65 +913,92 @@ function AusgabeAnsicht({
                     </tr>
                   </thead>
                   <tbody>
-                    {zeilen.map((z) => {
-                      const swap = kannTauschen(z);
-                      return (
-                        <tr key={z.key}>
-                          <td>{stueckById.get(z.kleidungsstueckId)?.name ?? "—"}</td>
-                          <td>{z.groesse ?? "—"}</td>
-                          <td style={{ textAlign: "center" }}>{z.menge}</td>
-                          <td>{fmtDate(z.ausgegebenAm)}</td>
-                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                            <button
-                              className="btn btn-ghost"
-                              title={swap ? "In andere Größe tauschen" : "Keine andere Größe verfügbar"}
-                              onClick={() => onTauschen(z.ausgaben)}
-                              disabled={!swap}
-                              style={swap ? undefined : { opacity: 0.4, cursor: "not-allowed" }}
-                            >
-                              <i className="ph ph-arrows-left-right" /> Tauschen
-                            </button>
-                            <button className="btn btn-ghost" title="Zurücknehmen" onClick={() => onRueckgabe(z.ausgaben)}>
-                              <i className="ph ph-arrow-u-up-left" /> Rückgabe
-                            </button>
+                    {gruppen.map((g, gi) => (
+                      <Fragment key={g.id}>
+                        <tr>
+                          <td colSpan={4} style={{ padding: "12px 12px 6px", borderTop: gi > 0 ? "1px solid var(--color-divider)" : undefined }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+                              <span style={{ width: 26, height: 26, flex: "none", borderRadius: 7, display: "grid", placeItems: "center", fontSize: 14, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
+                                <i className="ph ph-t-shirt" />
+                              </span>
+                              <b style={{ fontSize: 14 }}>{g.name}</b>
+                              <span style={{ fontSize: 11.5, color: "var(--color-neutral-500)" }}>· {g.menge} ausgegeben</span>
+                            </span>
                           </td>
                         </tr>
-                      );
-                    })}
+                        {g.zeilen.map((z) => {
+                          const swap = kannTauschen(z);
+                          return (
+                            <tr key={z.key}>
+                              <td>{z.groesse ?? "—"}</td>
+                              <td style={{ textAlign: "center" }}>{z.menge}</td>
+                              <td>{fmtDate(z.ausgegebenAm)}</td>
+                              <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                                {g.mitGroessen && (
+                                  <button
+                                    className="btn btn-ghost"
+                                    title={swap ? "In andere Größe tauschen" : "Keine andere Größe verfügbar"}
+                                    onClick={() => onTauschen(z.ausgaben)}
+                                    disabled={!swap}
+                                    style={swap ? undefined : { opacity: 0.4, cursor: "not-allowed" }}
+                                  >
+                                    <i className="ph ph-arrows-left-right" /> Tauschen
+                                  </button>
+                                )}
+                                <button className="btn btn-ghost" title="Zurücknehmen" onClick={() => onRueckgabe(z.ausgaben)}>
+                                  <i className="ph ph-arrow-u-up-left" /> Rückgabe
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </Fragment>
+                    ))}
                   </tbody>
                 </table>
                 </div>
 
-                {/* Mobile: kompakte Karten */}
-                <div className="flex flex-col lg:hidden" style={{ gap: 8 }}>
-                  {zeilen.map((z) => {
-                    const swap = kannTauschen(z);
-                    return (
-                      <div key={z.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "var(--color-surface)", borderRadius: 11 }}>
-                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                          <span style={{ fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {stueckById.get(z.kleidungsstueckId)?.name ?? "—"}
-                          </span>
-                          <span style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>
-                            {[`${z.menge}×`, z.groesse != null ? `Größe ${z.groesse}` : null, fmtDate(z.ausgegebenAm)].filter(Boolean).join(" · ")}
-                          </span>
-                        </div>
-                        <button
-                          className="btn btn-ghost"
-                          aria-label="In andere Größe tauschen"
-                          title={swap ? "In andere Größe tauschen" : "Keine andere Größe verfügbar"}
-                          onClick={() => onTauschen(z.ausgaben)}
-                          disabled={!swap}
-                          style={swap ? { flex: "none", padding: 10, fontSize: 18 } : { flex: "none", padding: 10, fontSize: 18, opacity: 0.4, cursor: "not-allowed" }}
-                        >
-                          <i className="ph ph-arrows-left-right" />
-                        </button>
-                        <button className="btn btn-ghost" aria-label="Zurücknehmen" title="Zurücknehmen" onClick={() => onRueckgabe(z.ausgaben)} style={{ flex: "none", padding: 10, fontSize: 18 }}>
-                          <i className="ph ph-arrow-u-up-left" />
-                        </button>
+                {/* Mobile: Gruppen-Karten je Kleidungsstück */}
+                <div className="flex flex-col lg:hidden" style={{ gap: 12 }}>
+                  {gruppen.map((g) => (
+                    <div key={g.id} className="panel">
+                      <div className="panel-h">
+                        <span style={{ width: 30, height: 30, flex: "none", borderRadius: 8, display: "grid", placeItems: "center", fontSize: 16, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
+                          <i className="ph ph-t-shirt" />
+                        </span>
+                        <b style={{ fontSize: 14 }}>{g.name}</b>
+                        <span style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--color-neutral-500)" }}>{g.menge} ausgegeben</span>
                       </div>
-                    );
-                  })}
+                      {g.zeilen.map((z) => {
+                        const swap = kannTauschen(z);
+                        return (
+                          <div key={z.key} className="mrow">
+                            <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 10 }}>
+                              {z.groesse != null && <span style={{ fontSize: 13.5, fontWeight: 500, minWidth: 48 }}>{z.groesse}</span>}
+                              <span style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
+                                {`${z.menge}× · ${fmtDate(z.ausgegebenAm)}`}
+                              </span>
+                            </span>
+                            {g.mitGroessen && (
+                              <button
+                                className="btn btn-ghost"
+                                aria-label="In andere Größe tauschen"
+                                title={swap ? "In andere Größe tauschen" : "Keine andere Größe verfügbar"}
+                                onClick={() => onTauschen(z.ausgaben)}
+                                disabled={!swap}
+                                style={swap ? { flex: "none", padding: 8, fontSize: 18 } : { flex: "none", padding: 8, fontSize: 18, opacity: 0.4, cursor: "not-allowed" }}
+                              >
+                                <i className="ph ph-arrows-left-right" />
+                              </button>
+                            )}
+                            <button className="btn btn-ghost" aria-label="Zurücknehmen" title="Zurücknehmen" onClick={() => onRueckgabe(z.ausgaben)} style={{ flex: "none", padding: 8, fontSize: 18 }}>
+                              <i className="ph ph-arrow-u-up-left" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               </>
             )}
