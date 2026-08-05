@@ -180,11 +180,13 @@ export const kleidungAusgabeSchema = z.object({
   groesse: z.string().nullish(),
   menge: z.number().int().min(1),
   ausgegebenAm: isoDate.nullish(),
+  rueckgabeAngefordertAm: isoDate.nullish(), // gesetzt = direkt auf Rückgabe-Warteliste (Split-POST)
 });
 
 export const kleidungAusgabeUpdateSchema = z.object({
   menge: z.number().int().min(1).optional(),
   groesse: z.string().nullish(), // Größentausch: bestehende Ausgabe auf andere Größe setzen
+  rueckgabeAngefordertAm: isoDate.nullish(), // Rückgabe-Warteliste vormerken / zurücksetzen
 });
 
 export type PersonInput = z.infer<typeof personSchema>;

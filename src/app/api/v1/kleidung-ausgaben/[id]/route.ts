@@ -11,9 +11,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const id = Number((await ctx.params).id);
   const body = await parseBody(req, kleidungAusgabeUpdateSchema);
   if (body instanceof NextResponse) return body;
-  const set: { menge?: number; groesse?: string | null } = {};
+  const set: { menge?: number; groesse?: string | null; rueckgabeAngefordertAm?: string | null } = {};
   if (body.menge !== undefined) set.menge = body.menge;
   if (body.groesse !== undefined) set.groesse = body.groesse?.trim() || null;
+  if (body.rueckgabeAngefordertAm !== undefined) set.rueckgabeAngefordertAm = body.rueckgabeAngefordertAm ?? null;
   const row = db
     .update(schema.kleidungAusgaben)
     .set(touch(set))

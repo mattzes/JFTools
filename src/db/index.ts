@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS kleidung_ausgaben (
   groesse TEXT,
   menge INTEGER NOT NULL DEFAULT 1,
   ausgegeben_am TEXT,
+  rueckgabe_angefordert_am TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -176,6 +177,11 @@ function migrate(sqlite: Database.Database) {
     sqlite.exec("DELETE FROM knoten_zuordnungen");
     sqlite.exec("ALTER TABLE knoten_zuordnungen ADD COLUMN gruppe_id INTEGER NOT NULL DEFAULT 0");
     sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS knoten_gruppe_pos ON knoten_zuordnungen(gruppe_id, position)");
+  }
+
+  const ausCols = sqlite.prepare("PRAGMA table_info(kleidung_ausgaben)").all() as { name: string }[];
+  if (!ausCols.some((c) => c.name === "rueckgabe_angefordert_am")) {
+    sqlite.exec("ALTER TABLE kleidung_ausgaben ADD COLUMN rueckgabe_angefordert_am TEXT");
   }
 
   const cols = sqlite.prepare("PRAGMA table_info(personen)").all() as { name: string }[];

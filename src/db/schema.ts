@@ -217,6 +217,8 @@ export const kleidungAusgaben = sqliteTable("kleidung_ausgaben", {
   groesse: text("groesse"),
   menge: integer("menge").notNull().default(1),
   ausgegebenAm: text("ausgegeben_am"),
+  // Gesetzt = auf der Rückgabe-Warteliste (wartet seit diesem Datum); NULL = aktiv in Besitz
+  rueckgabeAngefordertAm: text("rueckgabe_angefordert_am"),
   ...timestamps,
 });
 

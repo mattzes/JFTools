@@ -136,6 +136,7 @@ export type KleidungAusgabe = {
   groesse: string | null;
   menge: number;
   ausgegebenAm: string | null;
+  rueckgabeAngefordertAm: string | null;
 };
 
 export function personName(p: Person): string {
