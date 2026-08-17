@@ -18,6 +18,8 @@ ENV DB_PATH=/data/app.db
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# Vorlagen (z. B. Inselliste) werden vom Standalone-Build nicht automatisch übernommen
+COPY --from=builder /app/assets ./assets
 
 # better-sqlite3 native binding aus dem Standalone-Bundle ist enthalten
 VOLUME ["/data"]

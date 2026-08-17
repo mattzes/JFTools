@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { PageHeader } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { ExportDialog } from "@/components/ExportDialog";
+import { InsellisteDialog } from "@/components/InsellisteDialog";
 
 const LINKS = [
   { href: "/checkliste", icon: "ph-clipboard-text", label: "Checkliste", sub: "Zettel & Einverständnis" },
@@ -18,6 +19,7 @@ export default function MehrPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [insellisteOpen, setInsellisteOpen] = useState(false);
 
   async function importBackup(file: File) {
     setMsg(null);
@@ -66,6 +68,18 @@ export default function MehrPage() {
             <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)" }}>Mitgliederliste & Anwesenheit als .xlsx</div>
           </div>
         </button>
+        <button
+          onClick={() => setInsellisteOpen(true)}
+          style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 15px", background: "var(--color-surface)", borderRadius: 11, border: 0, color: "inherit", cursor: "pointer", textAlign: "left" }}
+        >
+          <span style={{ width: 38, height: 38, flex: "none", borderRadius: 10, display: "grid", placeItems: "center", fontSize: 19, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
+            <i className="ph ph-island" />
+          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 500 }}>Inselliste</div>
+            <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)" }}>Aktive Jugendliche in Vorlage als .xlsx</div>
+          </div>
+        </button>
 
         <div style={{ marginTop: 12, fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--color-neutral-600)", padding: "0 4px" }}>
           Datensicherung
@@ -105,6 +119,7 @@ export default function MehrPage() {
         {msg && <div style={{ fontSize: 12.5, color: msg.startsWith("Import fehl") ? "var(--danger)" : "var(--color-accent-300)", padding: "0 4px" }}>{msg}</div>}
       </div>
       {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
+      {insellisteOpen && <InsellisteDialog onClose={() => setInsellisteOpen(false)} />}
     </>
   );
 }
