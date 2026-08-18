@@ -4,8 +4,11 @@ import "@phosphor-icons/web/regular";
 import "@phosphor-icons/web/fill";
 import "@phosphor-icons/web/bold";
 import "./globals.css";
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
+import { isRoleKey } from "@/lib/roles";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -24,12 +27,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const session = await verifySessionToken(token);
+  const role = session && isRoleKey(session.role) ? session.role : null;
+
   return (
     <html lang="de">
       <body className={inter.variable}>
         <ConfirmProvider>
-          <AppShell>{children}</AppShell>
+          <AppShell role={role}>{children}</AppShell>
         </ConfirmProvider>
       </body>
     </html>

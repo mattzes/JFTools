@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  createSessionToken,
-  verifyPassword,
-  SESSION_COOKIE,
-  SESSION_MAX_AGE,
-} from "@/lib/auth";
+import { createSessionToken, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/auth";
+import { ROLES, roleForPassword } from "@/lib/roles";
 
 const schema = z.object({ password: z.string().min(1) });
 
@@ -41,7 +37,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Passwort fehlt" }, { status: 400 });
   }
 
-  if (!verifyPassword(parsed.data.password)) {
+  const role = roleForPassword(parsed.data.password);
+  if (!role) {
     const next = rec && rec.until > now ? rec.count + 1 : 1;
     attempts.set(ip, { count: next, until: now + WINDOW_MS });
     return NextResponse.json({ error: "Falsches Passwort" }, { status: 401 });
@@ -49,11 +46,11 @@ export async function POST(req: Request) {
 
   attempts.delete(ip);
 
-  const token = await createSessionToken();
+  const token = await createSessionToken(role);
   const proto =
     req.headers.get("x-forwarded-proto") ??
     new URL(req.url).protocol.replace(":", "");
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true, landing: ROLES[role].landing });
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",

@@ -31,7 +31,18 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+async function logout() {
+  await fetch("/api/auth/logout", { method: "POST" });
+  window.location.href = "/login";
+}
+
+export function AppShell({
+  children,
+  role,
+}: {
+  children: React.ReactNode;
+  role: string | null;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
@@ -41,6 +52,49 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Login-Seite ohne App-Navigation rendern.
   if (pathname === "/login") {
     return <>{children}</>;
+  }
+
+  // Eingeschränkte Rollen (nur ein Bereich) bekommen eine schlanke Hülle
+  // mit Titel und Abmelden-Button statt der vollen Navigation.
+  if (role && role !== "admin") {
+    return (
+      <div className="flex h-dvh overflow-hidden" style={{ flexDirection: "column" }}>
+        <header
+          style={{
+            flex: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "12px 16px",
+            background: "#1b1d29",
+            borderBottom: "1px solid var(--color-divider)",
+          }}
+        >
+          <i className="ph-fill ph-t-shirt" style={{ fontSize: 20, color: "var(--color-accent-300)" }} />
+          <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>Kleiderkammer</div>
+          <button
+            onClick={logout}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "8px 12px",
+              borderRadius: 9,
+              border: "1px solid var(--color-divider)",
+              background: "transparent",
+              color: "var(--color-neutral-300)",
+              fontSize: 12.5,
+              cursor: "pointer",
+            }}
+          >
+            <i className="ph ph-sign-out" /> Abmelden
+          </button>
+        </header>
+        <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {children}
+        </main>
+      </div>
+    );
   }
 
   return (

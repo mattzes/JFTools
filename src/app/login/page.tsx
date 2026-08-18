@@ -27,13 +27,15 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
+      const b = await res.json().catch(() => null);
       if (!res.ok) {
-        const b = await res.json().catch(() => null);
         throw new Error(b?.error ?? `Fehler ${res.status}`);
       }
       const next = params.get("next");
+      const target = next && next.startsWith("/") ? next : (b?.landing ?? "/");
       // Vollständiges Neuladen, damit die Middleware die neue Cookie sieht.
-      window.location.href = next && next.startsWith("/") ? next : "/";
+      // Nicht erlaubte Ziele fängt die Middleware ab und leitet zur Rollen-Startseite.
+      window.location.href = target;
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setLoading(false);

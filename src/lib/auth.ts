@@ -38,34 +38,33 @@ async function hmac(secret: string, data: string): Promise<string> {
 }
 
 // Konstante Laufzeit für gleich lange Strings (verhindert Timing-Leaks).
-function timingSafeEqual(a: string, b: string): boolean {
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let out = 0;
   for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return out === 0;
 }
 
-// Token = "<ablaufZeitpunkt>.<signatur>"
-export async function createSessionToken(): Promise<string> {
+export type SessionData = { role: string };
+
+// Token = "<ablaufZeitpunkt>.<rolle>.<signatur>"; signiert wird "<exp>.<rolle>".
+export async function createSessionToken(role: string): Promise<string> {
   const exp = String(Date.now() + SESSION_MAX_AGE * 1000);
-  const sig = await hmac(getSecret(), exp);
-  return `${exp}.${sig}`;
+  const payload = `${exp}.${role}`;
+  const sig = await hmac(getSecret(), payload);
+  return `${payload}.${sig}`;
 }
 
-export async function verifySessionToken(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
-  const dot = token.indexOf(".");
-  if (dot < 0) return false;
-  const exp = token.slice(0, dot);
-  const sig = token.slice(dot + 1);
-  const expected = await hmac(getSecret(), exp);
-  if (!timingSafeEqual(sig, expected)) return false;
+export async function verifySessionToken(
+  token: string | undefined,
+): Promise<SessionData | null> {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [exp, role, sig] = parts;
+  const expected = await hmac(getSecret(), `${exp}.${role}`);
+  if (!timingSafeEqual(sig, expected)) return null;
   const expMs = Number(exp);
-  return Number.isFinite(expMs) && expMs > Date.now();
-}
-
-export function verifyPassword(input: string): boolean {
-  const expected = process.env.APP_PASSWORD;
-  if (!expected) return false;
-  return timingSafeEqual(input, expected);
+  if (!Number.isFinite(expMs) || expMs <= Date.now()) return null;
+  return { role };
 }
