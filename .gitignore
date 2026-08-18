@@ -18,6 +18,8 @@
 *.pem
 npm-debug.log*
 .env*.local
+# docker-compose Secrets (nicht committen):
+.env
 
 # typescript
 *.tsbuildinfo

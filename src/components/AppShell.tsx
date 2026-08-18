@@ -38,6 +38,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [exportOpen, setExportOpen] = useState(false);
   const [insellisteOpen, setInsellisteOpen] = useState(false);
 
+  // Login-Seite ohne App-Navigation rendern.
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex h-dvh overflow-hidden">
       {/* NavRail — Desktop */}

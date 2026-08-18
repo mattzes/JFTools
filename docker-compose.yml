@@ -11,6 +11,11 @@ services:
       - jf-data:/data
     environment:
       - DB_PATH=/data/app.db
+      # Gemeinsames Passwort für den Zugang (bitte ändern!):
+      - APP_PASSWORD=${APP_PASSWORD:?APP_PASSWORD muss gesetzt sein}
+      # Zufälliger Schlüssel zum Signieren der Session-Cookie (min. 16 Zeichen).
+      # Erzeugen z. B. mit: openssl rand -base64 32
+      - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET muss gesetzt sein}
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 

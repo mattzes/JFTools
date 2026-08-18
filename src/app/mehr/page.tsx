@@ -117,6 +117,25 @@ export default function MehrPage() {
           }}
         />
         {msg && <div style={{ fontSize: 12.5, color: msg.startsWith("Import fehl") ? "var(--danger)" : "var(--color-accent-300)", padding: "0 4px" }}>{msg}</div>}
+
+        <div style={{ marginTop: 12, fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--color-neutral-600)", padding: "0 4px" }}>
+          Konto
+        </div>
+        <button
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+          style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 15px", background: "var(--color-surface)", borderRadius: 11, border: 0, color: "inherit", cursor: "pointer", textAlign: "left" }}
+        >
+          <span style={{ width: 38, height: 38, flex: "none", borderRadius: 10, display: "grid", placeItems: "center", fontSize: 19, background: "var(--color-neutral-800)", color: "var(--color-neutral-300)" }}>
+            <i className="ph ph-sign-out" />
+          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 500 }}>Abmelden</div>
+            <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)" }}>Sitzung auf diesem Gerät beenden</div>
+          </div>
+        </button>
       </div>
       {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
       {insellisteOpen && <InsellisteDialog onClose={() => setInsellisteOpen(false)} />}
