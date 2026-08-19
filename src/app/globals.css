@@ -300,9 +300,19 @@ select.input { appearance: auto; }
 
 /* ── datepicker (eigenes Design, kein natives Control) ── */
 .dp-trigger { display: flex; align-items: center; gap: 8px; text-align: left; }
-.dp-trigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dp-trigger .dp-ph { color: var(--color-neutral-600); }
-.dp-trigger > i { color: var(--color-neutral-500); font-size: 16px; }
+.dp-trigger:focus-within { border-color: var(--color-accent); }
+.dp-input {
+  flex: 1; min-width: 0; padding: 0; border: none; background: none;
+  font: inherit; font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
+}
+.dp-input:focus { outline: none; }
+.dp-input::placeholder { color: var(--color-neutral-600); }
+.dp-cal {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  padding: 0; border: none; background: none; cursor: pointer;
+  color: var(--color-neutral-500); font-size: 16px;
+}
+.dp-cal:hover { color: var(--color-text); }
 
 .dp-pop {
   position: fixed; z-index: 70; width: 268px;

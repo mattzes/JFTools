@@ -100,6 +100,34 @@ function dpParse(v?: string | null): { y: number; m: number; d: number } | null 
   const mm = v ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(v) : null;
   return mm ? { y: +mm[1], m: +mm[2] - 1, d: +mm[3] } : null;
 }
+// Eingabe säubern: getippte Punkte bleiben als Trenner erhalten; ohne Punkt
+// werden sie automatisch nach 2/2/4 Ziffern ergänzt (z. B. "04102026").
+function dpMaskDE(raw: string): string {
+  const s = raw.replace(/[^\d.]/g, "");
+  if (!s.includes(".")) {
+    const d = s.slice(0, 8);
+    if (d.length <= 2) return d;
+    if (d.length <= 4) return `${d.slice(0, 2)}.${d.slice(2)}`;
+    return `${d.slice(0, 2)}.${d.slice(2, 4)}.${d.slice(4)}`;
+  }
+  const caps = [2, 2, 4];
+  return s
+    .split(".")
+    .slice(0, 3)
+    .map((p, i) => p.replace(/\D/g, "").slice(0, caps[i]))
+    .join(".");
+}
+// Flexibles Datum ("4.10.26", "04.10.2026", …) → ISO (null bei unvollständig/ungültig)
+function dpDEtoISO(de: string): string | null {
+  const mm = /^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/.exec(de.trim());
+  if (!mm) return null;
+  const d = +mm[1], mo = +mm[2] - 1;
+  let y = +mm[3];
+  if (mm[3].length === 2) y += y < 70 ? 2000 : 1900; // 26 → 2026, 85 → 1985
+  const dt = new Date(y, mo, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo || dt.getDate() !== d) return null;
+  return dpISO(y, mo, d);
+}
 
 export function DatePicker({
   value,
@@ -116,8 +144,15 @@ export function DatePicker({
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
+
+  // Text der Tastatureingabe (Format TT.MM.JJJJ), synchron zum ISO-Wert von außen
+  const [text, setText] = useState(() => (value ? fmtDate(value) : ""));
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!focusedRef.current) setText(value ? fmtDate(value) : "");
+  }, [value]);
 
   const now = new Date();
   const todayISO = dpISO(now.getFullYear(), now.getMonth(), now.getDate());
@@ -201,22 +236,62 @@ export function DatePicker({
   };
   const pick = (iso: string) => {
     onChange(iso);
+    setText(iso ? fmtDate(iso) : "");
     setOpen(false);
+  };
+
+  const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const de = dpMaskDE(e.target.value);
+    setText(de);
+    const iso = dpDEtoISO(de);
+    if (iso) onChange(iso);
+    else if (de === "") onChange("");
+  };
+  const onBlur = () => {
+    focusedRef.current = false;
+    const iso = dpDEtoISO(text);
+    if (iso) setText(fmtDate(iso));
+    else if (text.trim() === "") setText("");
+    else setText(value ? fmtDate(value) : ""); // ungültige Eingabe verwerfen
   };
 
   return (
     <>
-      <button
-        type="button"
-        ref={triggerRef}
-        className={`input dp-trigger${className ? ` ${className}` : ""}`}
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        <span className={value ? undefined : "dp-ph"}>{value ? fmtDate(value) : placeholder}</span>
-        <i className="ph ph-calendar-blank" />
-      </button>
+      <div ref={triggerRef} className={`input dp-trigger${className ? ` ${className}` : ""}`}>
+        <input
+          type="text"
+          inputMode="numeric"
+          className="dp-input"
+          value={text}
+          placeholder={placeholder}
+          onChange={onInput}
+          onFocus={() => {
+            focusedRef.current = true;
+          }}
+          onBlur={onBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              setOpen(false);
+            } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setOpen(true);
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="dp-cal"
+          onClick={() => setOpen((o) => !o)}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-label="Kalender öffnen"
+          tabIndex={-1}
+        >
+          <i className="ph ph-calendar-blank" />
+        </button>
+      </div>
 
       {open &&
         typeof document !== "undefined" &&
