@@ -57,6 +57,7 @@ export default function PersonenPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [zeigeInaktive, setZeigeInaktive] = useState(false);
+  const [rolleFilter, setRolleFilter] = useState<"alle" | "jugendlich" | "betreuer">("alle");
   const { sort, toggle } = useSort();
 
   const liste = useMemo(() => {
@@ -64,12 +65,13 @@ export default function PersonenPage() {
     const q = suche.toLowerCase();
     const gefiltert = personen
       .filter((p) => (zeigeInaktive ? true : p.aktiv))
+      .filter((p) => rolleFilter === "alle" || p.rolle === rolleFilter)
       .filter((p) => !q || personName(p).toLowerCase().includes(q) || (p.ausweisnr ?? "").includes(q))
       .sort((a, b) =>
         a.rolle === b.rolle ? personName(a).localeCompare(personName(b), "de") : a.rolle === "jugendlich" ? -1 : 1,
       );
     return sortRows(gefiltert, sort, personSortVal);
-  }, [personen, suche, zeigeInaktive, sort]);
+  }, [personen, suche, zeigeInaktive, rolleFilter, sort]);
 
   if (!personen) return <Spinner />;
 
@@ -144,13 +146,18 @@ export default function PersonenPage() {
   return (
     <>
       <PageHeader title="Personen" sub={`${jugend} Jugendliche · ${betr} Betreuer`}>
+        <div className="seg" style={{ fontSize: 12 }}>
+          <button className="seg-opt" data-on={rolleFilter === "alle"} onClick={() => setRolleFilter("alle")}>Alle</button>
+          <button className="seg-opt" data-on={rolleFilter === "jugendlich"} onClick={() => setRolleFilter("jugendlich")}>Jugendliche</button>
+          <button className="seg-opt" data-on={rolleFilter === "betreuer"} onClick={() => setRolleFilter("betreuer")}>Betreuer</button>
+        </div>
         <button
           className={`btn ${zeigeInaktive ? "btn-primary" : "btn-secondary"}`}
           onClick={() => setZeigeInaktive((v) => !v)}
           title="Inaktive Personen ein- oder ausblenden"
         >
           <i className={`ph ${zeigeInaktive ? "ph-eye" : "ph-eye-slash"}`} />
-          Inaktive anzeigen
+          Inaktive
         </button>
         <input
           className="input"
