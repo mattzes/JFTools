@@ -117,11 +117,11 @@ export default function PersonenPage() {
       rolle: form.rolle,
       vorname: form.vorname.trim(),
       nachname: form.nachname.trim(),
-      strasse: istBetreuer ? null : form.strasse || null,
-      plz: istBetreuer ? null : form.plz || null,
-      ort: istBetreuer ? null : form.ort || null,
+      strasse: form.strasse || null,
+      plz: form.plz || null,
+      ort: form.ort || null,
       ausweisnr: istBetreuer ? null : form.ausweisnr || null,
-      geburtsdatum: istBetreuer ? null : form.geburtsdatum || null,
+      geburtsdatum: form.geburtsdatum || null,
       eintrittsdatum: istBetreuer ? null : form.eintrittsdatum || null,
       geschlecht: istBetreuer ? null : form.geschlecht || null,
       sitzplaetze: istBetreuer && form.sitzplaetze !== "" ? Number(form.sitzplaetze) : null,
@@ -443,6 +443,25 @@ export default function PersonenPage() {
                 </Field>
                 <Field label="Mitgliedsnummer (Ausweis-Nr.) *">
                   <input className="input" value={form.ausweisnr} onChange={(e) => setForm({ ...form, ausweisnr: e.target.value })} />
+                </Field>
+                <Field label="Straße">
+                  <input className="input" value={form.strasse} onChange={(e) => setForm({ ...form, strasse: e.target.value })} />
+                </Field>
+                <div className="grid grid-cols-[80px_1fr] gap-2">
+                  <Field label="PLZ">
+                    <input className="input" value={form.plz} onChange={(e) => setForm({ ...form, plz: e.target.value })} />
+                  </Field>
+                  <Field label="Ort">
+                    <input className="input" value={form.ort} onChange={(e) => setForm({ ...form, ort: e.target.value })} />
+                  </Field>
+                </div>
+              </>
+            )}
+
+            {form.rolle === "betreuer" && (
+              <>
+                <Field label="Geburtsdatum">
+                  <DatePicker value={form.geburtsdatum} onChange={(v) => setForm({ ...form, geburtsdatum: v })} />
                 </Field>
                 <Field label="Straße">
                   <input className="input" value={form.strasse} onChange={(e) => setForm({ ...form, strasse: e.target.value })} />
