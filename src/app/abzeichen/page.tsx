@@ -54,6 +54,8 @@ export default function AbzeichenPage() {
     .sort((a, b) => personName(a).localeCompare(personName(b), "de"));
   const jugend = sortRows(jugendBasis, sort, (p, key) => {
     if (key === "name") return personName(p);
+    if (key === "jgalter") return p.geburtsdatum ? alterInDiesemJahr(p.geburtsdatum) : null;
+    if (key === "alter") return p.geburtsdatum ? alter(p.geburtsdatum) : null;
     const b = BADGES.find((x) => x.id === key);
     if (!b) return null;
     const datum = p[b.dateKey];
@@ -90,6 +92,8 @@ export default function AbzeichenPage() {
               <thead>
                 <tr>
                   <Th sortKey="name" sort={sort} onSort={toggle} style={{ minWidth: 160 }}>Name</Th>
+                  <Th sortKey="jgalter" sort={sort} onSort={toggle} align="center" style={{ minWidth: 110 }}>Jahrg.-Alter</Th>
+                  <Th sortKey="alter" sort={sort} onSort={toggle} align="center" style={{ minWidth: 110 }}>Aktuelles Alter</Th>
                   {BADGES.map((b) => (
                     <Th key={b.id} sortKey={b.id} sort={sort} onSort={toggle} align="center" style={{ minWidth: 150 }}>{b.label}</Th>
                   ))}
@@ -99,6 +103,8 @@ export default function AbzeichenPage() {
                 {jugendGefiltert.map((p) => (
                   <tr key={p.id} onClick={() => setSelId(p.id)} style={{ cursor: "pointer" }} title="Eintragen / planen">
                     <td><span style={{ fontSize: 15, fontWeight: 500 }}>{personName(p)}</span></td>
+                    <td style={{ textAlign: "center" }}>{p.geburtsdatum ? <span style={{ fontWeight: 500 }}>{alterInDiesemJahr(p.geburtsdatum)}</span> : <Dash />}</td>
+                    <td style={{ textAlign: "center" }}>{p.geburtsdatum ? <span style={{ fontWeight: 500 }}>{alter(p.geburtsdatum)}</span> : <Dash />}</td>
                     {BADGES.map((b) => (
                       <td key={b.id} style={{ textAlign: "center" }}>
                         <AbzeichenCell p={p} badge={b} />
@@ -128,7 +134,10 @@ export default function AbzeichenPage() {
                   className="panel"
                   style={{ padding: "12px 14px", border: 0, textAlign: "left", cursor: "pointer", font: "inherit", color: "inherit", width: "100%" }}
                 >
-                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 9 }}>{personName(p)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>{personName(p)}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--color-neutral-500)", marginBottom: 9 }}>
+                    {p.geburtsdatum ? `Jahrgangsalter ${alterInDiesemJahr(p.geburtsdatum)} · Alter ${alter(p.geburtsdatum)}` : "kein Geburtsdatum"}
+                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                     {BADGES.map((b) => (
                       <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
