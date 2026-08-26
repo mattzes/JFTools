@@ -141,6 +141,9 @@ export default function RueckmeldungenPage() {
                   <span style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>/ {d.ges} erhalten</span>
                 </div>
                 <div className="av-bar" style={{ width: "100%" }}><div className="av-fill" style={{ width: `${d.pct}%`, background: d.color }} /></div>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, color: "var(--color-neutral-500)" }}>
+                  <i className="ph ph-pencil-simple" style={{ fontSize: 12 }} /> Zum Bearbeiten klicken
+                </span>
               </button>
             ))}
           </div>
