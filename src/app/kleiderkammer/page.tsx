@@ -13,6 +13,19 @@ import {
 import { DatePicker, Dialog, Empty, PageHeader, Spinner, fmtDate } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useStoredState } from "@/lib/useStoredState";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type Modus = "bestand" | "ausgabe" | "rueckgaben";
 
@@ -24,7 +37,10 @@ type NeuStueck = { name: string; mitGroessen: boolean; menge: string; groessen: 
 const EMPTY_STUECK: NeuStueck = { name: "", mitGroessen: false, menge: "", groessen: [{ groesse: "", menge: "" }] };
 
 // Ein Dialog für alles: Bezeichnung, Bestand je Größe (bzw. gesamt), Löschen
-type EditZeile = { id: number | null; origGroesse: string; groesse: string; menge: string };
+// uid: stabile Client-ID für Drag-&-Drop (bleibt beim Live-Umsortieren konstant)
+type EditZeile = { uid: string; id: number | null; origGroesse: string; groesse: string; menge: string };
+let uidCounter = 0;
+const neueZeileUid = () => `z${++uidCounter}`;
 type EditForm = {
   id: number;
   name: string;
@@ -42,6 +58,15 @@ type AusgabeForm = {
 
 function heute() {
   return new Date().toISOString().slice(0, 10);
+}
+
+// Element in einem Array von `from` nach `to` verschieben (neue Kopie)
+function moveItem<T>(arr: T[], from: number, to: number): T[] {
+  if (to < 0 || to >= arr.length) return arr;
+  const next = [...arr];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
 }
 
 export default function KleiderkammerPage() {
@@ -78,9 +103,13 @@ export default function KleiderkammerPage() {
       arr.push(b);
       m.set(b.kleidungsstueckId, arr);
     });
-    // Größen alphabetisch/numerisch sortieren
+    // Nach benutzerdefinierter Reihenfolge sortieren, bei Gleichstand numerisch/alphabetisch
     m.forEach((arr) =>
-      arr.sort((a, b) => (a.groesse ?? "").localeCompare(b.groesse ?? "", "de", { numeric: true })),
+      arr.sort(
+        (a, b) =>
+          a.sortierung - b.sortierung ||
+          (a.groesse ?? "").localeCompare(b.groesse ?? "", "de", { numeric: true }),
+      ),
     );
     return m;
   }, [bestand]);
@@ -139,8 +168,8 @@ export default function KleiderkammerPage() {
       name: s.name,
       mitGroessen: s.mitGroessen,
       groessen: s.mitGroessen
-        ? rows.map((b) => ({ id: b.id, origGroesse: b.groesse ?? "", groesse: b.groesse ?? "", menge: String(b.menge) }))
-        : [{ id: rows[0]?.id ?? null, origGroesse: "", groesse: "", menge: rows[0] ? String(rows[0].menge) : "" }],
+        ? rows.map((b) => ({ uid: neueZeileUid(), id: b.id, origGroesse: b.groesse ?? "", groesse: b.groesse ?? "", menge: String(b.menge) }))
+        : [{ uid: neueZeileUid(), id: rows[0]?.id ?? null, origGroesse: "", groesse: "", menge: rows[0] ? String(rows[0].menge) : "" }],
       removed: [],
     });
   }
@@ -161,7 +190,9 @@ export default function KleiderkammerPage() {
 
     // 3. Bestand je Größe (bzw. gesamt) upserten
     if (editForm.mitGroessen) {
-      for (const g of editForm.groessen) {
+      // Reihenfolge im Formular = benutzerdefinierte Sortierung (sortierung = Index)
+      for (let i = 0; i < editForm.groessen.length; i++) {
+        const g = editForm.groessen[i];
         const name = g.groesse.trim();
         if (name === "") continue;
         // Umbenannte Größe: alte Zeile entfernen, damit keine Waise bleibt
@@ -170,7 +201,7 @@ export default function KleiderkammerPage() {
         }
         await api("/kleidung-bestand", {
           method: "PUT",
-          body: JSON.stringify({ kleidungsstueckId: editForm.id, groesse: name, menge: Number(g.menge) || 0 }),
+          body: JSON.stringify({ kleidungsstueckId: editForm.id, groesse: name, menge: Number(g.menge) || 0, sortierung: i }),
         });
       }
     } else {
@@ -487,55 +518,23 @@ export default function KleiderkammerPage() {
 
           {editForm.mitGroessen ? (
             <div className="field">
-              <label>Größen & Bestand</label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {editForm.groessen.map((g, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8 }}>
-                    <input
-                      className="input"
-                      placeholder="Größe (z. B. 152, S, 42)"
-                      value={g.groesse}
-                      onChange={(e) => {
-                        const groessen = [...editForm.groessen];
-                        groessen[i] = { ...g, groesse: e.target.value };
-                        setEditForm({ ...editForm, groessen });
-                      }}
-                    />
-                    <input
-                      className="input"
-                      type="number"
-                      min={0}
-                      placeholder="Menge"
-                      style={{ maxWidth: 110 }}
-                      value={g.menge}
-                      onChange={(e) => {
-                        const groessen = [...editForm.groessen];
-                        groessen[i] = { ...g, menge: e.target.value };
-                        setEditForm({ ...editForm, groessen });
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      aria-label="Größe entfernen"
-                      onClick={() =>
-                        setEditForm({
-                          ...editForm,
-                          groessen: editForm.groessen.filter((_, j) => j !== i),
-                          removed: g.id != null ? [...editForm.removed, g.id] : editForm.removed,
-                        })
-                      }
-                    >
-                      <i className="ph ph-x" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <label>Größen & Bestand · zum Sortieren am Griff ziehen</label>
+              <GroessenEditor
+                groessen={editForm.groessen}
+                onChange={(groessen) => setEditForm({ ...editForm, groessen })}
+                onRemove={(i) =>
+                  setEditForm({
+                    ...editForm,
+                    groessen: editForm.groessen.filter((_, j) => j !== i),
+                    removed: editForm.groessen[i].id != null ? [...editForm.removed, editForm.groessen[i].id!] : editForm.removed,
+                  })
+                }
+              />
               <button
                 type="button"
                 className="btn btn-ghost"
                 style={{ alignSelf: "flex-start", marginTop: 6 }}
-                onClick={() => setEditForm({ ...editForm, groessen: [...editForm.groessen, { id: null, origGroesse: "", groesse: "", menge: "" }] })}
+                onClick={() => setEditForm({ ...editForm, groessen: [...editForm.groessen, { uid: neueZeileUid(), id: null, origGroesse: "", groesse: "", menge: "" }] })}
               >
                 <i className="ph ph-plus" /> Größe hinzufügen
               </button>
@@ -551,7 +550,7 @@ export default function KleiderkammerPage() {
                 onChange={(e) =>
                   setEditForm({
                     ...editForm,
-                    groessen: [{ ...(editForm.groessen[0] ?? { id: null, origGroesse: "", groesse: "" }), menge: e.target.value }],
+                    groessen: [{ ...(editForm.groessen[0] ?? { uid: neueZeileUid(), id: null, origGroesse: "", groesse: "" }), menge: e.target.value }],
                   })
                 }
               />
@@ -721,6 +720,109 @@ export default function KleiderkammerPage() {
         );
       })()}
     </>
+  );
+}
+
+// ── Größen-Editor mit Drag-&-Drop-Sortierung (touch-tauglich) ──
+function GroessenEditor({
+  groessen,
+  onChange,
+  onRemove,
+}: {
+  groessen: EditZeile[];
+  onChange: (groessen: EditZeile[]) => void;
+  onRemove: (index: number) => void;
+}) {
+  // Kleine Aktivierungsdistanz: Tippen in die Felder bleibt möglich, erst Ziehen startet DnD
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  function onDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = groessen.findIndex((g) => g.uid === active.id);
+    const to = groessen.findIndex((g) => g.uid === over.id);
+    if (from !== -1 && to !== -1) onChange(moveItem(groessen, from, to));
+  }
+
+  const setField = (i: number, patch: Partial<EditZeile>) => {
+    const next = [...groessen];
+    next[i] = { ...next[i], ...patch };
+    onChange(next);
+  };
+
+  return (
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <SortableContext items={groessen.map((g) => g.uid)} strategy={verticalListSortingStrategy}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {groessen.map((g, i) => (
+            <GroesseRow key={g.uid} index={i} zeile={g} onField={setField} onRemove={onRemove} />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function GroesseRow({
+  index,
+  zeile,
+  onField,
+  onRemove,
+}: {
+  index: number;
+  zeile: EditZeile;
+  onField: (i: number, patch: Partial<EditZeile>) => void;
+  onRemove: (i: number) => void;
+}) {
+  // Live-Umsortierung: andere Einträge weichen aus, unter dem gehaltenen Element bleibt eine Lücke
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: zeile.uid });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        display: "flex", gap: 8, alignItems: "center", borderRadius: 8,
+        transform: CSS.Transform.toString(transform),
+        transition,
+        position: "relative",
+        zIndex: isDragging ? 10 : undefined,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+    >
+      <button
+        type="button"
+        className="btn btn-ghost"
+        aria-label="Zum Sortieren ziehen"
+        title="Zum Sortieren ziehen"
+        style={{ flex: "none", padding: 6, cursor: "grab", touchAction: "none", color: "var(--color-neutral-500)" }}
+        {...attributes}
+        {...listeners}
+      >
+        <i className="ph ph-dots-six-vertical" />
+      </button>
+      <input
+        className="input"
+        placeholder="Größe (z. B. 152, S, 42)"
+        value={zeile.groesse}
+        onChange={(e) => onField(index, { groesse: e.target.value })}
+      />
+      <input
+        className="input"
+        type="number"
+        min={0}
+        placeholder="Menge"
+        style={{ maxWidth: 110 }}
+        value={zeile.menge}
+        onChange={(e) => onField(index, { menge: e.target.value })}
+      />
+      <button
+        type="button"
+        className="btn btn-ghost"
+        aria-label="Größe entfernen"
+        onClick={() => onRemove(index)}
+      >
+        <i className="ph ph-x" />
+      </button>
+    </div>
   );
 }
 

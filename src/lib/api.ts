@@ -128,6 +128,7 @@ export type KleidungBestand = {
   kleidungsstueckId: number;
   groesse: string | null;
   menge: number;
+  sortierung: number;
 };
 export type KleidungAusgabe = {
   id: number;

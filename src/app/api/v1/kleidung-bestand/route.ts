@@ -34,7 +34,7 @@ export async function PUT(req: Request) {
   if (existing) {
     const row = db
       .update(b)
-      .set(touch({ menge: body.menge }))
+      .set(touch(body.sortierung != null ? { menge: body.menge, sortierung: body.sortierung } : { menge: body.menge }))
       .where(eq(b.id, existing.id))
       .returning()
       .get();
@@ -43,7 +43,7 @@ export async function PUT(req: Request) {
 
   const row = db
     .insert(b)
-    .values({ kleidungsstueckId: body.kleidungsstueckId, groesse, menge: body.menge })
+    .values({ kleidungsstueckId: body.kleidungsstueckId, groesse, menge: body.menge, sortierung: body.sortierung ?? 0 })
     .returning()
     .get();
   return NextResponse.json(row, { status: 201 });

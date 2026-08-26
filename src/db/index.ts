@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS kleidung_bestand (
   kleidungsstueck_id INTEGER NOT NULL REFERENCES kleidungsstuecke(id) ON DELETE CASCADE,
   groesse TEXT,
   menge INTEGER NOT NULL DEFAULT 0,
+  sortierung INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -182,6 +183,22 @@ function migrate(sqlite: Database.Database) {
   const ausCols = sqlite.prepare("PRAGMA table_info(kleidung_ausgaben)").all() as { name: string }[];
   if (!ausCols.some((c) => c.name === "rueckgabe_angefordert_am")) {
     sqlite.exec("ALTER TABLE kleidung_ausgaben ADD COLUMN rueckgabe_angefordert_am TEXT");
+  }
+
+  const bestandCols = sqlite.prepare("PRAGMA table_info(kleidung_bestand)").all() as { name: string }[];
+  if (!bestandCols.some((c) => c.name === "sortierung")) {
+    sqlite.exec("ALTER TABLE kleidung_bestand ADD COLUMN sortierung INTEGER NOT NULL DEFAULT 0");
+    // Altbestand: bestehende Größen numerisch/alphabetisch als Startreihenfolge festlegen
+    const stueckIds = sqlite.prepare("SELECT DISTINCT kleidungsstueck_id AS id FROM kleidung_bestand").all() as { id: number }[];
+    const upd = sqlite.prepare("UPDATE kleidung_bestand SET sortierung = ? WHERE id = ?");
+    for (const { id } of stueckIds) {
+      const rows = sqlite
+        .prepare("SELECT id, groesse FROM kleidung_bestand WHERE kleidungsstueck_id = ?")
+        .all(id) as { id: number; groesse: string | null }[];
+      rows
+        .sort((a, b) => (a.groesse ?? "").localeCompare(b.groesse ?? "", "de", { numeric: true }))
+        .forEach((r, i) => upd.run(i, r.id));
+    }
   }
 
   const cols = sqlite.prepare("PRAGMA table_info(personen)").all() as { name: string }[];

@@ -200,6 +200,7 @@ export const kleidungBestand = sqliteTable(
       .references(() => kleidungsstuecke.id, { onDelete: "cascade" }),
     groesse: text("groesse"), // NULL = keine Größenunterteilung
     menge: integer("menge").notNull().default(0),
+    sortierung: integer("sortierung").notNull().default(0), // benutzerdefinierte Reihenfolge der Größen
     ...timestamps,
   },
   (t) => [uniqueIndex("bestand_stueck_groesse").on(t.kleidungsstueckId, t.groesse)],

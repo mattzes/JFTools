@@ -172,6 +172,7 @@ export const kleidungBestandSchema = z.object({
   kleidungsstueckId: z.number().int(),
   groesse: z.string().nullish(),
   menge: z.number().int().min(0),
+  sortierung: z.number().int().optional(), // benutzerdefinierte Reihenfolge der Größen
 });
 
 export const kleidungAusgabeSchema = z.object({

@@ -22,15 +22,16 @@ export async function POST(req: Request) {
     .get();
 
   const zeilen = body.bestand ?? [];
-  for (const z of zeilen) {
+  zeilen.forEach((z, i) => {
     db.insert(schema.kleidungBestand)
       .values({
         kleidungsstueckId: stueck.id,
         groesse: body.mitGroessen ? (z.groesse?.trim() || null) : null,
         menge: z.menge,
+        sortierung: i,
       })
       .run();
-  }
+  });
 
   return NextResponse.json(stueck, { status: 201 });
 }
