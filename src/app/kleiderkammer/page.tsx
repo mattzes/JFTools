@@ -738,6 +738,18 @@ function BestandAnsicht({
   verfuegbar: (b: KleidungBestand) => number;
   onEdit: (s: Kleidungsstueck) => void;
 }) {
+  const [eingeklapptRaw, setEingeklappt] = useStoredState("kleiderkammer.bestand.eingeklappt", "");
+  const eingeklappt = useMemo(
+    () => new Set(eingeklapptRaw.split(",").filter(Boolean).map(Number)),
+    [eingeklapptRaw],
+  );
+  const toggle = (id: number) => {
+    const next = new Set(eingeklappt);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setEingeklappt([...next].join(","));
+  };
+
   if (stuecke.length === 0) {
     return <Empty icon="ph-t-shirt" text="Noch keine Kleidungsstücke" hint="Lege oben ein Kleidungsstück an." />;
   }
@@ -747,52 +759,64 @@ function BestandAnsicht({
         const rows = bestandByStueck.get(s.id) ?? [];
         const gesamt = rows.reduce((n, b) => n + b.menge, 0);
         const ausgegeben = rows.reduce((n, b) => n + issued(b.kleidungsstueckId, b.groesse), 0);
+        const zu = eingeklappt.has(s.id);
         return (
-          <button
-            key={s.id}
-            type="button"
-            className="panel"
-            onClick={() => onEdit(s)}
-            style={{ flexShrink: 0, width: "100%", textAlign: "left", border: 0, background: "var(--color-surface)", color: "inherit", font: "inherit", cursor: "pointer" }}
-          >
-            <div className="panel-h">
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
-                <span style={{ width: 34, height: 34, flex: "none", borderRadius: 9, display: "grid", placeItems: "center", fontSize: 18, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
-                  <i className="ph ph-t-shirt" />
-                </span>
-                <span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <b style={{ fontSize: 14.5 }}>{s.name}</b>
-                  </span>
-                  <span style={{ fontSize: 11.5, color: "var(--color-neutral-500)" }}>
-                    {gesamt} gesamt · {ausgegeben} ausgegeben · {gesamt - ausgegeben} verfügbar
-                  </span>
+          <div key={s.id} className="panel" style={{ flexShrink: 0 }}>
+            <div
+              className="panel-h"
+              role="button"
+              aria-expanded={!zu}
+              onClick={() => toggle(s.id)}
+              style={{ cursor: "pointer" }}
+            >
+              <i
+                className={`ph ${zu ? "ph-caret-right" : "ph-caret-down"}`}
+                style={{ flex: "none", fontSize: 14, color: "var(--color-neutral-500)" }}
+              />
+              <span style={{ width: 34, height: 34, flex: "none", borderRadius: 9, display: "grid", placeItems: "center", fontSize: 18, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>
+                <i className="ph ph-t-shirt" />
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <b style={{ display: "block", fontSize: 14.5 }}>{s.name}</b>
+                <span style={{ fontSize: 11.5, color: "var(--color-neutral-500)" }}>
+                  {gesamt} gesamt · {ausgegeben} ausgegeben · {gesamt - ausgegeben} verfügbar
                 </span>
               </span>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ marginLeft: "auto", flex: "none" }}
+                aria-label="Bearbeiten"
+                title="Bearbeiten"
+                onClick={(e) => { e.stopPropagation(); onEdit(s); }}
+              >
+                <i className="ph ph-pencil-simple" />
+              </button>
             </div>
 
-            {rows.length === 0 ? (
-              <div className="mrow" style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
-                Kein Bestand erfasst.
-              </div>
-            ) : (
-              rows.map((b) => {
-                const aus = issued(b.kleidungsstueckId, b.groesse);
-                const verf = verfuegbar(b);
-                return (
-                  <div key={b.id} className="mrow">
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 500, minWidth: 60 }}>{b.groesse ?? "Gesamt"}</span>
-                      <span style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
-                        {b.menge} gesamt · {aus} ausgegeben ·{" "}
-                        <span style={{ color: verf > 0 ? "var(--color-accent-300)" : "var(--warn)" }}>{verf} verfügbar</span>
+            {!zu &&
+              (rows.length === 0 ? (
+                <div className="mrow" style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
+                  Kein Bestand erfasst.
+                </div>
+              ) : (
+                rows.map((b) => {
+                  const aus = issued(b.kleidungsstueckId, b.groesse);
+                  const verf = verfuegbar(b);
+                  return (
+                    <div key={b.id} className="mrow">
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 500, minWidth: 60 }}>{b.groesse ?? "Gesamt"}</span>
+                        <span style={{ fontSize: 12.5, color: "var(--color-neutral-500)" }}>
+                          {b.menge} gesamt · {aus} ausgegeben ·{" "}
+                          <span style={{ color: verf > 0 ? "var(--color-accent-300)" : "var(--warn)" }}>{verf} verfügbar</span>
+                        </span>
                       </span>
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </button>
+                    </div>
+                  );
+                })
+              ))}
+          </div>
         );
       })}
     </div>
