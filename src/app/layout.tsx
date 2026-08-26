@@ -24,6 +24,10 @@ export const viewport: Viewport = {
   themeColor: "#161826",
   width: "device-width",
   initialScale: 1,
+  // Kein Pinch-/Auto-Zoom → App-artiges Verhalten; verhindert u. a. das
+  // iOS-Einzoomen beim Fokussieren von Eingabefeldern (<16px Schriftgröße)
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
 };
 
