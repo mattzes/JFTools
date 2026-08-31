@@ -52,6 +52,8 @@ type EditForm = {
 type AusgabeForm = {
   kleidungsstueckId: number | null;
   groesse: string | null;
+  modus: "vorhanden" | "erhoehen";
+  neueGroesse: boolean;
   menge: string;
   ausgegebenAm: string;
 };
@@ -237,17 +239,37 @@ export default function KleiderkammerPage() {
 
   async function speichereAusgabe() {
     if (!ausgabeForm || !selPerson || ausgabeForm.kleidungsstueckId == null) return;
+    const stueckId = ausgabeForm.kleidungsstueckId;
+    const stueck = stueckById.get(stueckId);
+    const menge = Number(ausgabeForm.menge) || 1;
+    const groesse = stueck?.mitGroessen ? ausgabeForm.groesse?.trim() || null : null;
+
+    if (ausgabeForm.modus === "erhoehen") {
+      const rows = bestandByStueck.get(stueckId) ?? [];
+      const row = rows.find((b) => b.groesse === groesse);
+      await api("/kleidung-bestand", {
+        method: "PUT",
+        body: JSON.stringify({
+          kleidungsstueckId: stueckId,
+          groesse,
+          menge: (row?.menge ?? 0) + menge,
+          ...(row ? {} : { sortierung: rows.length }),
+        }),
+      });
+    }
+
     await api("/kleidung-ausgaben", {
       method: "POST",
       body: JSON.stringify({
         personId: selPerson.id,
-        kleidungsstueckId: ausgabeForm.kleidungsstueckId,
-        groesse: ausgabeForm.groesse,
-        menge: Number(ausgabeForm.menge) || 1,
+        kleidungsstueckId: stueckId,
+        groesse,
+        menge,
         ausgegebenAm: ausgabeForm.ausgegebenAm || null,
       }),
     });
     setAusgabeForm(null);
+    reloadBestand();
     reloadAusgaben();
   }
 
@@ -405,7 +427,7 @@ export default function KleiderkammerPage() {
           bestandByStueck={bestandByStueck}
           verfuegbar={verfuegbar}
           ausgabenAlle={ausgaben}
-          onAusgeben={() => setAusgabeForm({ kleidungsstueckId: null, groesse: null, menge: "1", ausgegebenAm: heute() })}
+          onAusgeben={() => setAusgabeForm({ kleidungsstueckId: null, groesse: null, modus: "vorhanden", neueGroesse: false, menge: "1", ausgegebenAm: heute() })}
           onRueckgabe={(ausgaben) => setRueckgabeForm({ ausgaben, menge: String(ausgaben.reduce((n, a) => n + a.menge, 0)) })}
           onTauschen={(ausgaben) => setTauschForm({ ausgaben, groesse: null })}
         />
@@ -577,7 +599,7 @@ export default function KleiderkammerPage() {
               value={ausgabeForm.kleidungsstueckId ?? ""}
               onChange={(e) => {
                 const id = e.target.value ? Number(e.target.value) : null;
-                setAusgabeForm({ ...ausgabeForm, kleidungsstueckId: id, groesse: null });
+                setAusgabeForm({ ...ausgabeForm, kleidungsstueckId: id, groesse: null, neueGroesse: false });
               }}
             >
               <option value="">— wählen —</option>
@@ -587,26 +609,86 @@ export default function KleiderkammerPage() {
             </select>
           </div>
 
-          {ausgabeStueck?.mitGroessen && (
+          {ausgabeStueck && (
             <div className="field">
-              <label>Größe</label>
-              <select
-                className="input"
-                value={ausgabeForm.groesse ?? ""}
-                onChange={(e) => setAusgabeForm({ ...ausgabeForm, groesse: e.target.value || null })}
-              >
-                <option value="">— wählen —</option>
-                {ausgabeBestand.map((b) => {
-                  const v = verfuegbar(b);
-                  return (
-                    <option key={b.id} value={b.groesse ?? ""} disabled={v <= 0}>
-                      {b.groesse} — {v} verfügbar
-                    </option>
-                  );
-                })}
-              </select>
+              <label>Quelle</label>
+              <div className="seg" role="tablist" aria-label="Bestandsquelle">
+                <button
+                  type="button"
+                  className="seg-opt"
+                  data-on={ausgabeForm.modus === "vorhanden"}
+                  onClick={() => setAusgabeForm({ ...ausgabeForm, modus: "vorhanden", groesse: null, neueGroesse: false })}
+                >
+                  <i className="ph ph-stack" /> Aus Bestand
+                </button>
+                <button
+                  type="button"
+                  className="seg-opt"
+                  data-on={ausgabeForm.modus === "erhoehen"}
+                  onClick={() => setAusgabeForm({ ...ausgabeForm, modus: "erhoehen", groesse: null, neueGroesse: false })}
+                >
+                  <i className="ph ph-plus-circle" /> Bestand erhöhen
+                </button>
+              </div>
             </div>
           )}
+
+          {ausgabeStueck?.mitGroessen && (() => {
+            const erhoehen = ausgabeForm.modus === "erhoehen";
+            // Im Erhöhen-Modus ohne vorhandene Größen gibt es nichts zum Auffüllen → direkt Freitext
+            const nurNeu = erhoehen && ausgabeBestand.length === 0;
+            const freitext = erhoehen && (ausgabeForm.neueGroesse || nurNeu);
+            return (
+              <div className="field">
+                <label>Größe</label>
+                {freitext ? (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      className="input"
+                      autoFocus
+                      placeholder="Größe (z. B. 152, S, 42)"
+                      value={ausgabeForm.groesse ?? ""}
+                      onChange={(e) => setAusgabeForm({ ...ausgabeForm, groesse: e.target.value || null })}
+                    />
+                    {!nurNeu && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        title="Zurück zur Auswahl"
+                        onClick={() => setAusgabeForm({ ...ausgabeForm, neueGroesse: false, groesse: null })}
+                      >
+                        <i className="ph ph-list" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <select
+                    className="input"
+                    value={ausgabeForm.groesse ?? ""}
+                    onChange={(e) => {
+                      if (e.target.value === "__neu__") {
+                        setAusgabeForm({ ...ausgabeForm, neueGroesse: true, groesse: "" });
+                        return;
+                      }
+                      setAusgabeForm({ ...ausgabeForm, groesse: e.target.value || null });
+                    }}
+                  >
+                    <option value="">— wählen —</option>
+                    {ausgabeBestand.map((b) => {
+                      const v = verfuegbar(b);
+                      // Im Erhöhen-Modus auch ausverkaufte Größen wählbar (werden aufgefüllt)
+                      return (
+                        <option key={b.id} value={b.groesse ?? ""} disabled={!erhoehen && v <= 0}>
+                          {b.groesse} — {v} verfügbar
+                        </option>
+                      );
+                    })}
+                    {erhoehen && <option value="__neu__">+ Neue Größe …</option>}
+                  </select>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="field">
             <label>Menge{ausgabeStueck ? ` (${ausgabeMaxMenge} verfügbar)` : ""}</label>
@@ -617,6 +699,21 @@ export default function KleiderkammerPage() {
               value={ausgabeForm.menge}
               onChange={(e) => setAusgabeForm({ ...ausgabeForm, menge: e.target.value })}
             />
+            {(() => {
+              if (ausgabeForm.modus !== "erhoehen") return null;
+              const anzahl = Number(ausgabeForm.menge) || 0;
+              if (anzahl < 1) return null;
+              const groesse = ausgabeStueck?.mitGroessen ? ausgabeForm.groesse?.trim() : null;
+              const label =
+                ausgabeMaxMenge === 0 && !ausgabeBestand.some((b) => (b.groesse ?? "") === (groesse ?? ""))
+                  ? `Neuer Bestand${groesse ? ` „${groesse}"` : ""} wird mit ${anzahl} angelegt`
+                  : `Bestand wird um ${anzahl} erhöht`;
+              return (
+                <div style={{ fontSize: 12, color: "var(--color-neutral-500)", marginTop: 4 }}>
+                  <i className="ph ph-info" /> {label}
+                </div>
+              );
+            })()}
           </div>
           <div className="field">
             <label>Ausgegeben am</label>
@@ -630,9 +727,9 @@ export default function KleiderkammerPage() {
               onClick={speichereAusgabe}
               disabled={
                 ausgabeForm.kleidungsstueckId == null ||
-                (ausgabeStueck?.mitGroessen && !ausgabeForm.groesse) ||
+                (ausgabeStueck?.mitGroessen && !ausgabeForm.groesse?.trim()) ||
                 (Number(ausgabeForm.menge) || 0) < 1 ||
-                (Number(ausgabeForm.menge) || 0) > ausgabeMaxMenge
+                (ausgabeForm.modus === "vorhanden" && (Number(ausgabeForm.menge) || 0) > ausgabeMaxMenge)
               }
             >
               Ausgeben
